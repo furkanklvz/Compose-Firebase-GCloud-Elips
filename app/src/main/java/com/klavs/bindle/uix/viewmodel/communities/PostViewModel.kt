@@ -1,13 +1,11 @@
 package com.klavs.bindle.uix.viewmodel.communities
 
 import android.util.Log
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -20,7 +18,6 @@ import com.klavs.bindle.data.entity.PostComment
 import com.klavs.bindle.data.entity.PostReport
 import com.klavs.bindle.data.entity.UserReport
 import com.klavs.bindle.data.repo.firestore.FirestoreRepository
-import com.klavs.bindle.data.repo.storage.StorageRepository
 import com.klavs.bindle.resource.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +31,6 @@ import javax.inject.Inject
 @HiltViewModel
 class PostViewModel @Inject constructor(
     private val firestoreRepo: FirestoreRepository,
-    private val storageRepo: StorageRepository,
     private val db: FirebaseFirestore
 ) : ViewModel() {
 
@@ -202,7 +198,7 @@ class PostViewModel @Inject constructor(
         communityId: String,
         postId: String,
         rolePriority: Int,
-        currentUser: FirebaseUser
+        photoUrl: String?
     ) {
         val commentsRef = db.collection("communities").document(communityId).collection("posts")
             .document(postId).collection("comments")
@@ -219,8 +215,7 @@ class PostViewModel @Inject constructor(
                 is Resource.Success -> {
                     val commentedPost = comment.copy(
                         id = uploadCommentState.data ?: "",
-                        senderUserName = currentUser.displayName,
-                        senderProfileImageUrl = currentUser.photoUrl?.toString(),
+                        senderProfileImageUrl = photoUrl,
                         senderRolePriority = rolePriority,
                         isMyComment = true
                     )
@@ -312,10 +307,12 @@ class PostViewModel @Inject constructor(
         }
     }
 
-    fun likeThePost(postId: String, communityId: String, myUid: String) {
+    fun likeThePost(postId: String, communityId: String, myUid: String, username:String) {
         viewModelScope.launch(Dispatchers.Main) {
             val likeModel = Like(
-                uid = myUid, postId = postId
+                uid = myUid,
+                postId = postId,
+                likedUsername = username
             )
             val postRef = db.collection("communities").document(communityId).collection("posts")
                 .document(postId).collection("likes")
@@ -490,7 +487,7 @@ class PostViewModel @Inject constructor(
                                         isMyComment = commentSnapshot.data["senderUid"] == myUid,
                                         id = commentSnapshot.id,
                                         senderRolePriority = CommunityRoles.NotMember.rolePriority,
-                                        senderUserName = userDoc.data?.userName,
+                                        senderUserName = userDoc.data?.userName?:"",
                                         senderProfileImageUrl = userDoc.data?.profilePictureUrl
                                     )
                                 }
@@ -498,7 +495,7 @@ class PostViewModel @Inject constructor(
                                 commentSnapshot.toObject(PostComment::class.java).copy(
                                     isMyComment = commentSnapshot.data["senderUid"] == myUid,
                                     id = commentSnapshot.id,
-                                    senderUserName = userDoc.data?.userName,
+                                    senderUserName = userDoc.data?.userName?:"",
                                     senderProfileImageUrl = userDoc.data?.profilePictureUrl
                                 )
                             }

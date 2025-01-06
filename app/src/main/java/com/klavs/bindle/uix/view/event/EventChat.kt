@@ -396,7 +396,7 @@ fun EventChat(
                                             reportType = selectedContent!!,
                                             description = optionalDescription,
                                             messageContent = reportUserDialog!!.message,
-                                            messageId = reportUserDialog!!.id?:""
+                                            messageId = reportUserDialog!!.id
                                         )
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
@@ -562,7 +562,7 @@ fun EventChat(
                                                             IconButton(
                                                                 onClick = {
                                                                     chatViewModel.getMessages(
-                                                                        eventId = eventResource.data!!.id!!,
+                                                                        eventId = eventResource.data!!.id,
                                                                         pageSize = 10,
                                                                         myUid = currentUser.uid
                                                                     )
@@ -622,6 +622,7 @@ fun EventChat(
                                                     disabledIndicatorColor = Color.Transparent
                                                 ),
                                                 value = messageText,
+                                                maxLines = 2,
                                                 onValueChange = { messageText = it }
                                             )
                                             IconButton(
@@ -634,7 +635,8 @@ fun EventChat(
                                                     )
                                                     chatViewModel.sendMessage(
                                                         eventId = eventResource.data?.id ?: "",
-                                                        message = messageModel
+                                                        message = messageModel,
+                                                        username = currentUser.displayName?:""
                                                     )
                                                     messageText = ""
 

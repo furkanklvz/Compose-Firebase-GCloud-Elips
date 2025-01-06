@@ -10,7 +10,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.Event
-import com.klavs.bindle.data.entity.PostReport
 import com.klavs.bindle.data.entity.UserReport
 import com.klavs.bindle.data.entity.message.Message
 import com.klavs.bindle.data.entity.message.MessageFirestore
@@ -111,13 +110,14 @@ class EventChatViewModel @Inject constructor(
     }
 
 
-    fun sendMessage(eventId: String, message: Message) {
+    fun sendMessage(eventId: String, message: Message, username: String) {
         messageSent.value = Resource.Loading(data = message.copy(timestamp = Timestamp.now()))
         viewModelScope.launch(Dispatchers.Main) {
             val messageRef = db.collection("events").document(eventId).collection("messages")
             val messageFirestore = MessageFirestore(
                 message = message.message,
                 senderUid = message.senderUid,
+                senderUsername = username,
                 timestamp = Timestamp.now()
             )
             val state = firestoreRepo.addDocument(

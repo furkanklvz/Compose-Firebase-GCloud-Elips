@@ -1,7 +1,6 @@
 package com.klavs.bindle.uix.view.communities.communityPage
 
 import android.net.Uri
-import android.util.Log
 import android.view.Gravity
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,7 +23,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -71,7 +68,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -102,13 +98,11 @@ import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.Post
 import com.klavs.bindle.data.entity.PostComment
 import com.klavs.bindle.resource.Resource
-import com.klavs.bindle.ui.theme.LightRed
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
 import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
 import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.glide.GlideImage
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -340,7 +334,8 @@ fun CommunityFlow(
                                     )
                                     vmPost.likeThePost(
                                         postId = post.id, communityId = community.id,
-                                        myUid = currentUser.uid
+                                        myUid = currentUser.uid,
+                                        username = currentUser.displayName?:""
                                     )
 
                                 } else {
@@ -1123,13 +1118,14 @@ fun CommentsBottomSheet(
                     vmPost.commentOn(
                         comment = PostComment(
                             senderUid = currentUser.uid,
+                            senderUserName = currentUser.displayName?:"",
                             commentText = textingComment,
                             date = Timestamp.now()
                         ),
                         rolePriority = rolePriority,
                         communityId = communityId,
                         postId = postId,
-                        currentUser = currentUser
+                        photoUrl = currentUser.photoUrl?.toString()
                     )
                     textingComment = ""
 
@@ -1255,7 +1251,7 @@ fun CommentRow(
         overlineContent = {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(comment.senderUserName ?: "", style = MaterialTheme.typography.titleSmall)
+                    Text(comment.senderUserName, style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.width(10.dp))
                     val text = TimeFunctions().convertTimestampToLocalizeTime(
                         comment.date,

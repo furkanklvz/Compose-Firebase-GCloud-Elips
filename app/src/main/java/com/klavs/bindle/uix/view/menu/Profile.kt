@@ -5,8 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -49,7 +47,6 @@ import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -57,15 +54,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
@@ -81,7 +75,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
@@ -96,7 +89,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -896,17 +888,11 @@ private fun Content(
                         }
                     )
                     HorizontalDivider()
-                    AccountInformationRow(
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Phone,
-                                contentDescription = "user name"
-                            )
-                        },
-                        label = stringResource(R.string.phone_number_optional),
+                    PhoneNumberRow(
                         value = phoneNumberValue
-                    ) {
-                        changePhoneNumber(it)
+                    ) {value->
+                        if (value.length <= 15)
+                        changePhoneNumber(value.filter { it.isDigit() })
                     }
                 }
 
@@ -1265,6 +1251,44 @@ private fun AccountInformationRow(
                 Text(stringResource(R.string.username_already_used))
             }
         } else null,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(7.dp),
+        colors = TextFieldDefaults.colors(
+            unfocusedIndicatorColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent,
+            errorContainerColor = Color.Transparent
+        )
+    )
+}
+@Composable
+private fun PhoneNumberRow(
+    value: String,
+    userNameIsEmpty: Boolean = false,
+    userNameAlreadyUsed: Boolean = false,
+    onValueChange: (String) -> Unit,
+) {
+    TextField(
+        trailingIcon = {Icon(
+            imageVector = Icons.Rounded.Phone,
+            contentDescription = "user name"
+        )},
+        isError = userNameAlreadyUsed || userNameIsEmpty,
+        label = { Text(text = stringResource(R.string.phone_number_optional)) },
+        value = value,
+        onValueChange = onValueChange,
+        supportingText = if (userNameIsEmpty) {
+            {
+                Text(stringResource(R.string.username_cannot_be_empty))
+            }
+        } else if (userNameAlreadyUsed) {
+            {
+                Text(stringResource(R.string.username_already_used))
+            }
+        } else null,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
         modifier = Modifier
             .fillMaxWidth()
             .padding(7.dp),

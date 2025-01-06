@@ -5,7 +5,7 @@ import com.google.firebase.Timestamp
 data class PostComment(
     val id: String = "",
     val senderUid: String = "",
-    val senderUserName: String? = null,
+    val senderUserName: String = "",
     val senderProfileImageUrl: String? = null,
     val senderRolePriority: Int? = null,
     val commentText: String ="",

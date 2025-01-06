@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -75,7 +74,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
 import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
@@ -122,7 +120,6 @@ import com.klavs.bindle.uix.viewmodel.event.EventChatViewModel
 import com.klavs.bindle.uix.viewmodel.event.EventsViewModel
 import com.klavs.bindle.util.startdestination.StartDestinationProvider
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.Date
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -134,7 +131,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val (startDestination, startDestinationArg) = startDestinationProvider.determineStartDestination(
+        val startRoute = startDestinationProvider.determineStartDestination(
             intent
         )
 
@@ -142,8 +139,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             BindleTheme {
                 NavHostWithBottomNavigation(
-                    startDestination = startDestination,
-                    startDestinationArg = startDestinationArg
+                    startRoute = startRoute
                 )
             }
         }
@@ -152,8 +148,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun NavHostWithBottomNavigation(
-    startDestination: String,
-    startDestinationArg: String? = null
+    startRoute: String? = null
 ) {
     var privacyPolicyExpanded by remember { mutableStateOf(false) }
     var termsOfServiceExpanded by remember { mutableStateOf(false) }
@@ -161,6 +156,7 @@ private fun NavHostWithBottomNavigation(
     var privacyPolicyChecked by remember { mutableStateOf(false) }
     var termsExpanded by remember { mutableStateOf(false) }
     var successfullyPurchasedProduct by remember { mutableStateOf<String?>(null) }
+    var startRouteState by remember { mutableStateOf(startRoute) }
     val navHostViewModel: NavHostViewModel = hiltViewModel()
     val currentUser by navHostViewModel.currentUser.collectAsState()
     val userResource by navHostViewModel.userResourceFlow.collectAsState()
@@ -342,7 +338,7 @@ private fun NavHostWithBottomNavigation(
                         onClick = {
                             if (privacyPolicyChecked && termsOfServiceChecked && userResource.data != null) {
                                 navHostViewModel.acceptTermsAndPrivacyPolicy(
-                                    uid = userResource.data!!.uid!!
+                                    uid = userResource.data!!.uid
                                 )
                             }
                         }
@@ -413,15 +409,10 @@ private fun NavHostWithBottomNavigation(
                 }
             )
         }
-        val startWithCommunity = startDestination == "community_page_graph"
-        val navHostStartDestination =
-            if (startWithCommunity) startDestination else startDestinationArg?.let { arg ->
-                "${startDestination}/$arg"
-            } ?: startDestination
 
         NavHost(
             navController = navController,
-            startDestination = navHostStartDestination,
+            startDestination = BottomNavItem.Home.route,
             modifier = Modifier.padding(
                 bottom = if (bottomBarIsEnable) innerPadding.calculateBottomPadding()
                 else WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
@@ -436,6 +427,10 @@ private fun NavHostWithBottomNavigation(
             composable(BottomNavItem.Home.route) {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = true
+                    startRouteState?.let {
+                        startRouteState = null
+                        navController.navigate(it)
+                    }
                 }
                 val homeViewModel = hiltViewModel<HomeViewModel>()
                 Home(
@@ -706,9 +701,7 @@ private fun NavHostWithBottomNavigation(
             }
 
             navigation(
-                startDestination = if (startWithCommunity) {
-                    "community_page/$startDestinationArg"
-                } else "community_page/{communityId}",
+                startDestination = "community_page/{communityId}",
                 route = "community_page_graph"
             ) {
                 composable(

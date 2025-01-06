@@ -97,6 +97,7 @@ import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -419,6 +420,7 @@ private fun MapView(
     onSearch: (String) -> Unit
 
 ) {
+
     val userResource by navHostViewModel.userResourceFlow.collectAsState()
     val context = LocalContext.current
     var selectionModeIsEnable by remember { mutableStateOf(false) }
@@ -433,7 +435,13 @@ private fun MapView(
     val selectedCategories = remember { mutableStateListOf<EventType>() }
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
+    val eventsInCamRegion by viewModel.eventsInRegion.collectAsState()
 
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.resetEventsInRegionResource()
+        }
+    }
 
     LaunchedEffect(true) {
         if (viewModel.createEventState.value is Resource.Success) {
@@ -454,7 +462,6 @@ private fun MapView(
             viewModel.createEventState.value = Resource.Idle()
         }
     }
-    val eventsInCamRegion by viewModel.eventsInRegion.collectAsState()
     LaunchedEffect(eventsInCamRegion) {
         when (eventsInCamRegion) {
             is Resource.Error -> {
@@ -485,7 +492,7 @@ private fun MapView(
                     scope.launch {
                         snackbarHostState.showSnackbar(context.getString(R.string.no_events_found_in_this_region))
                     }
-                    viewModel.resetSearchResultResource()
+                    viewModel.resetEventsInRegionResource()
                 }
                 Log.e("map", "eventList.size: " + eventList.size)
             }
@@ -739,7 +746,7 @@ private fun MapView(
                         showUnverifiedAccountAlertDialog = true
                     },
                     navigateToEventPage = {
-                        navController.navigate("event_page/${showEventBottomSheet!!.id!!}")
+                        navController.navigate("event_page/${showEventBottomSheet!!.id}")
                     },
                     onLogInClick = { navController.navigate("log_in") }
                 )
@@ -1596,8 +1603,8 @@ private fun MapPreview() {
                 onPublicChange = {}
             )
         }
-        val rowHeight = 120.dp
-        /*SearchResultRow(
+        /*val rowHeight = 120.dp
+        SearchResultRow(
             Event(
                 title = "title",
                 description = "descriptiondescriptiondescriptiondescriptiondescriptiondescription",

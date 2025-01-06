@@ -216,7 +216,8 @@ fun Post(
                 viewModel.likeThePost(
                     postId = postId,
                     communityId = communityId,
-                    myUid = currentUser.uid
+                    myUid = currentUser.uid,
+                    username = currentUser.displayName?:""
                 )
                 post = post?.copy(liked = true)
                 post =
@@ -246,6 +247,7 @@ fun Post(
             viewModel.commentOn(
                 comment = PostComment(
                     senderUid = currentUser.uid,
+                    senderUserName = currentUser.displayName?:"",
                     commentText = it,
                     date = Timestamp.now()
                 ),
@@ -253,7 +255,7 @@ fun Post(
                 postId = postId,
                 rolePriority = myMemberDocResource.data?.rolePriority
                     ?: CommunityRoles.Member.rolePriority,
-                currentUser = currentUser
+                currentUser.photoUrl?.toString()
             )
         },
         myPhotoUrl = currentUser.photoUrl,

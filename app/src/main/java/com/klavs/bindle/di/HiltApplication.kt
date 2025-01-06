@@ -17,9 +17,6 @@ import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.firebase.auth.FirebaseAuth
 import com.klavs.bindle.R
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 

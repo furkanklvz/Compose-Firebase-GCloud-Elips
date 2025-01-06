@@ -10,18 +10,13 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Source
 import com.klavs.bindle.R
 import com.klavs.bindle.data.datastore.AppPref
 import com.klavs.bindle.data.entity.Event
-import com.klavs.bindle.data.entity.community.Community
 import com.klavs.bindle.data.entity.community.JoinedCommunity
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.data.repo.algolia.AlgoliaRepository
-import com.klavs.bindle.data.repo.auth.AuthRepository
 import com.klavs.bindle.data.repo.firestore.FirestoreRepository
 import com.klavs.bindle.data.repo.location.LocationRepository
 import com.klavs.bindle.resource.Resource
@@ -78,7 +73,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun resetSearchResultResource() {
+    fun resetEventsInRegionResource() {
         _eventsInRegion.value = Resource.Idle()
     }
 
