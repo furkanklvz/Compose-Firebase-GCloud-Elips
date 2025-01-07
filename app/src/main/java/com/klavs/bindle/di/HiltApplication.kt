@@ -95,14 +95,14 @@ class HiltApplication : Application(), Application.ActivityLifecycleCallbacks,
             )
         }
 
-        private fun wasLoadTimeLessThanNHoursAgo(numHours: Long): Boolean {
+        private fun wasLoadTimeLessThanNHoursAgo(): Boolean {
             val dateDifference: Long = Date().time - loadTime
             val numMilliSecondsPerHour: Long = 3600000
-            return dateDifference < numMilliSecondsPerHour * numHours
+            return dateDifference < numMilliSecondsPerHour * 4L
         }
 
         private fun isAdAvailable(): Boolean {
-            return appOpenAd != null && wasLoadTimeLessThanNHoursAgo(4)
+            return appOpenAd != null && wasLoadTimeLessThanNHoursAgo()
         }
 
         fun showAdIfAvailable(activity: Activity) {

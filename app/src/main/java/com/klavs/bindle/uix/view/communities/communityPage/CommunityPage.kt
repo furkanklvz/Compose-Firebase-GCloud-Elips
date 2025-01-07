@@ -880,7 +880,8 @@ private fun Content(
                                 community.id.let {
                                     if (currentUser != null) {
                                         viewModel.deleteTheCommunity(
-                                            communityId = it
+                                            communityId = it,
+                                            uid = currentUser.uid
                                         )
                                     }
                                 }

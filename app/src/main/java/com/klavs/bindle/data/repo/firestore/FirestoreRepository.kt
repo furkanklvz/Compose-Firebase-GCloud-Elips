@@ -45,6 +45,7 @@ interface FirestoreRepository {
     suspend fun createEvent(event : Event, newTickets:Long):Resource<Event>
     suspend fun getEvent(eventId: String): Resource<Event>
     suspend fun cancelTheEvent(eventId: String, uid: String)
+    suspend fun deleteTheCommunity(communityId: String, uid: String)
     suspend fun getEvents(query: Query, listSize: Int? = null): Resource<List<Event>>
     suspend fun refundTicket(uid:String, amount: Long): Resource<String>
     suspend fun searchDocumentByFieldNameStartWith(query: Query, field: String, startWith: String): Resource<QuerySnapshot>

@@ -142,6 +142,9 @@ class FirestoreRepositoryImpl @Inject constructor(val ds: FirestoreDataSource) :
     override suspend fun cancelTheEvent(eventId: String, uid: String) =
         withContext(Dispatchers.IO){ds.cancelTheEvent(eventId, uid)}
 
+    override suspend fun deleteTheCommunity(communityId: String, uid: String)
+    = withContext(Dispatchers.IO){ds.deleteTheCommunity(communityId, uid)}
+
     override suspend fun getEvents(query: Query, listSize: Int?): Resource<List<Event>> =
         withContext(Dispatchers.IO){ds.getEvents(query, listSize)}
 

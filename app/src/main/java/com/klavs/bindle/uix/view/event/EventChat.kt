@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -79,6 +79,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.klavs.bindle.R
+import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.message.Message
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
@@ -87,6 +88,8 @@ import com.klavs.bindle.uix.viewmodel.event.EventChatViewModel
 import com.klavs.bindle.util.Constants
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -101,17 +104,13 @@ fun EventChat(
     chatViewModel: EventChatViewModel
 ) {
     val eventResource by chatViewModel.event.collectAsState()
-    var messageText by remember { mutableStateOf("") }
     val pagedMessagesResource by chatViewModel.messages.collectAsState()
     val newMessagesResource by chatViewModel.newMessages.collectAsState()
-    val messages = remember { mutableStateListOf<Message>() }
     val messageSentResource by chatViewModel.messageSent.collectAsState()
+    val messages = remember { mutableStateListOf<Message>() }
     var messagesLoaded by remember { mutableStateOf(false) }
     var reportUserDialog by remember { mutableStateOf<Message?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+
 
     BackHandler {
         if (navController.currentBackStackEntry == null) {
@@ -155,6 +154,85 @@ fun EventChat(
         }
     }
 
+    EventChatContent(
+        newMessagesResource = newMessagesResource,
+        messageSentResource = messageSentResource,
+        numOfParticipantsText = "${if (numOfParticipants == -1) chatViewModel.numOfParticipant.value ?: "" else numOfParticipants}",
+        uid = currentUser.uid,
+        pagedMessagesResource = pagedMessagesResource,
+        eventResource = eventResource,
+        changeChatRestriction = { checked ->
+            chatViewModel.changeChatRestriction(
+                eventId = eventId,
+                restriction = checked
+            )
+        },
+        onBackClick = {
+            if (navController.currentBackStackEntry == null) {
+                navController.navigate("event_page/$eventId")
+            } else {
+                navController.popBackStack()
+            }
+        },
+        reportUserDialog = reportUserDialog,
+        setReportUserDialog = { reportUserDialog = it },
+        sendReport = { reportType, description ->
+            chatViewModel.sendReport(
+                reportedUser = reportUserDialog?.senderUid ?: "",
+                uid = currentUser.uid,
+                reportType = reportType,
+                description = description,
+                messageContent = reportUserDialog?.message ?: "",
+                messageId = reportUserDialog?.id ?: ""
+            )
+        },
+        messagesLoaded = messagesLoaded,
+        setMessagesLoaded = { messagesLoaded = it },
+        messages = messages,
+        thereIsOldestMessageDoc = chatViewModel.oldestMessageDoc != null,
+        sendMessage = {
+            chatViewModel.sendMessage(
+                eventId = eventResource.data?.id ?: "",
+                message = it,
+                username = currentUser.displayName ?: ""
+            )
+        },
+        getMessages = {
+            chatViewModel.getMessages(
+                eventId = eventResource.data?.id ?: "",
+                pageSize = 10,
+                myUid = currentUser.uid
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun EventChatContent(
+    newMessagesResource: Resource<List<Message>>,
+    pagedMessagesResource: Resource<List<Message>>,
+    eventResource: Resource<Event>,
+    messageSentResource: Resource<Message>,
+    numOfParticipantsText: String,
+    messagesLoaded: Boolean,
+    thereIsOldestMessageDoc: Boolean,
+    setMessagesLoaded: (Boolean) -> Unit,
+    changeChatRestriction: (checked: Boolean) -> Unit,
+    onBackClick: () -> Unit,
+    getMessages: () -> Unit,
+    messages: List<Message>,
+    reportUserDialog: Message?,
+    setReportUserDialog: (Message?) -> Unit,
+    sendMessage: (Message) -> Unit,
+    sendReport: (content: Int, description: String) -> Unit,
+    uid: String
+) {
+    var messageText by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState, modifier = Modifier.imePadding()) },
         topBar = {
@@ -180,9 +258,9 @@ fun EventChat(
                             imageVector = Icons.Outlined.Group,
                             contentDescription = "count the participants"
                         )
-                        Text("${if (numOfParticipants == -1) chatViewModel.numOfParticipant.value ?: "" else numOfParticipants}")
+                        Text(numOfParticipantsText)
                     }
-                    if (eventResource.data?.ownerUid == currentUser.uid) {
+                    if (eventResource.data?.ownerUid == uid) {
                         var expandChatSettings by remember { mutableStateOf(false) }
                         IconButton(
                             onClick = { expandChatSettings = true }
@@ -205,7 +283,7 @@ fun EventChat(
                                 trailingIcon = {
                                     Switch(
                                         thumbContent = {
-                                            if (eventResource.data?.chatRestriction == true) {
+                                            if (eventResource.data.chatRestriction) {
                                                 Icon(
                                                     imageVector = Icons.Outlined.Lock,
                                                     contentDescription = null,
@@ -213,12 +291,9 @@ fun EventChat(
                                                 )
                                             }
                                         },
-                                        checked = eventResource.data?.chatRestriction == true,
+                                        checked = eventResource.data.chatRestriction,
                                         onCheckedChange = { checked ->
-                                            chatViewModel.changeChatRestriction(
-                                                eventId = eventId,
-                                                restriction = checked
-                                            )
+                                            changeChatRestriction(checked)
                                         }
                                     )
                                 }
@@ -235,13 +310,7 @@ fun EventChat(
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = {
-                            if (navController.currentBackStackEntry == null) {
-                                navController.navigate("event_page/$eventId")
-                            } else {
-                                navController.popBackStack()
-                            }
-                        }
+                        onClick = onBackClick
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
@@ -261,11 +330,11 @@ fun EventChat(
 
         ) {
 
-            if (reportUserDialog != null){
+            if (reportUserDialog != null) {
                 var selectedContent by remember { mutableStateOf<Int?>(null) }
                 var optionalDescription by remember { mutableStateOf("") }
                 val messageLimit = 100
-                Dialog(onDismissRequest = { reportUserDialog = null }) {
+                Dialog(onDismissRequest = { setReportUserDialog(null) }) {
                     Card {
                         Column(
                             modifier = Modifier
@@ -380,7 +449,7 @@ fun EventChat(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 IconButton(
-                                    onClick = { reportUserDialog = null }
+                                    onClick = { setReportUserDialog(null) }
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
@@ -390,20 +459,13 @@ fun EventChat(
                                 OutlinedButton(
                                     enabled = selectedContent != null,
                                     onClick = {
-                                        chatViewModel.sendReport(
-                                            reportedUser = reportUserDialog!!.senderUid,
-                                            uid = currentUser.uid,
-                                            reportType = selectedContent!!,
-                                            description = optionalDescription,
-                                            messageContent = reportUserDialog!!.message,
-                                            messageId = reportUserDialog!!.id
-                                        )
+                                        sendReport(selectedContent!!, optionalDescription)
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
                                                 context.getString(R.string.report_sent)
                                             )
                                         }
-                                        reportUserDialog = null
+                                        setReportUserDialog(null)
                                     }
                                 ) {
                                     Text(stringResource(R.string.send))
@@ -438,7 +500,7 @@ fun EventChat(
                     ) {
                         Icon(imageVector = Icons.Rounded.WarningAmber, contentDescription = "error")
                         Text(
-                            eventResource.messageResource?.let { stringResource(it) }?:"",
+                            eventResource.messageResource?.let { stringResource(it) } ?: "",
                             style = MaterialTheme.typography.titleSmall
                         )
                     }
@@ -464,7 +526,8 @@ fun EventChat(
                                     contentDescription = "error"
                                 )
                                 Text(
-                                    newMessagesResource.messageResource?.let { stringResource(it) }?:"",
+                                    newMessagesResource.messageResource?.let { stringResource(it) }
+                                        ?: "",
                                     style = MaterialTheme.typography.titleSmall
                                 )
                             }
@@ -478,7 +541,7 @@ fun EventChat(
 
                         is Resource.Success -> {
                             if (pagedMessagesResource is Resource.Success) {
-                                messagesLoaded = true
+                                setMessagesLoaded(true)
                             }
                             if (messagesLoaded) {
                                 isLoading = false
@@ -496,7 +559,7 @@ fun EventChat(
                                                 .weight(1f)
                                         ) {
                                             Text(
-                                                if (eventResource.data?.ownerUid != currentUser.uid && eventResource.data?.chatRestriction == true) {
+                                                if (eventResource.data?.ownerUid != uid && eventResource.data?.chatRestriction == true) {
                                                     stringResource(R.string.no_messages)
                                                 } else {
                                                     stringResource(R.string.start_a_conversation)
@@ -514,25 +577,39 @@ fun EventChat(
                                                 .fillMaxWidth()
                                                 .weight(1f)
                                         ) {
-
                                             items(newMessagesResource.data!!) { message ->
+                                                val index =
+                                                    newMessagesResource.data.indexOf(message)
                                                 MessageRow(
                                                     message = message,
-                                                    currentUser = currentUser,
                                                     eventOwnerUid = eventResource.data?.ownerUid
                                                         ?: "",
-                                                    reportUser = {reportUserDialog = message}
+                                                    reportUser = { setReportUserDialog(message) },
+                                                    uid = uid,
+                                                    isFirstMessageOfUser = if (index == newMessagesResource.data.size - 1) true else
+                                                        newMessagesResource.data[index + 1].senderUid
+                                                                != message.senderUid
+
+
                                                 )
                                             }
-                                            items(messages) { message ->
-                                                MessageRow(
-                                                    message = message,
-                                                    currentUser = currentUser,
-                                                    eventOwnerUid = eventResource.data?.ownerUid
-                                                        ?: "",
-                                                    reportUser = {reportUserDialog = message}
-                                                )
-                                            }
+
+                                                items(messages) { message ->
+                                                    val index =
+                                                        messages.indexOf(message)
+                                                    MessageRow(
+                                                        message = message,
+                                                        eventOwnerUid = eventResource.data?.ownerUid
+                                                            ?: "",
+                                                        reportUser = { setReportUserDialog(message) },
+                                                        uid = uid,
+                                                        isFirstMessageOfUser = if (index == messages.size - 1) true else
+                                                            messages[index + 1].senderUid
+                                                                    != message.senderUid
+                                                    )
+                                                }
+
+
 
                                             if (pagedMessagesResource is Resource.Loading) {
                                                 item {
@@ -552,7 +629,7 @@ fun EventChat(
 
                                                 }
                                             } else {
-                                                if (chatViewModel.oldestMessageDoc != null && eventResource.data?.id != null) {
+                                                if (thereIsOldestMessageDoc && eventResource.data?.id != null) {
                                                     item {
                                                         Box(
                                                             Modifier
@@ -560,13 +637,7 @@ fun EventChat(
                                                                 .fillMaxWidth()
                                                         ) {
                                                             IconButton(
-                                                                onClick = {
-                                                                    chatViewModel.getMessages(
-                                                                        eventId = eventResource.data!!.id,
-                                                                        pageSize = 10,
-                                                                        myUid = currentUser.uid
-                                                                    )
-                                                                },
+                                                                onClick = getMessages,
                                                                 modifier = Modifier
                                                                     .size(40.dp)
                                                                     .align(Alignment.Center)
@@ -588,7 +659,7 @@ fun EventChat(
                                         }
                                     }
 
-                                    if (eventResource.data?.chatRestriction == true && currentUser.uid != eventResource.data?.ownerUid) {
+                                    if (eventResource.data?.chatRestriction == true && uid != eventResource.data.ownerUid) {
                                         Surface(
                                             modifier = Modifier.padding(5.dp),
                                             color = MaterialTheme.colorScheme.primaryContainer,
@@ -630,14 +701,10 @@ fun EventChat(
                                                 onClick = {
                                                     val messageModel = Message(
                                                         message = messageText.trim(),
-                                                        senderUid = currentUser.uid,
+                                                        senderUid = uid,
                                                         timestamp = FieldValue.serverTimestamp()
                                                     )
-                                                    chatViewModel.sendMessage(
-                                                        eventId = eventResource.data?.id ?: "",
-                                                        message = messageModel,
-                                                        username = currentUser.displayName?:""
-                                                    )
+                                                    sendMessage(messageModel)
                                                     messageText = ""
 
                                                 },
@@ -668,12 +735,8 @@ fun EventChat(
                                     }
                                 }
                             }
-
-
                         }
                     }
-
-
                 }
             }
 
@@ -685,30 +748,34 @@ fun EventChat(
 fun MessageRow(
     message: Message,
     eventOwnerUid: String,
-    currentUser: FirebaseUser?,
+    uid: String,
+    isFirstMessageOfUser: Boolean,
     reportUser: () -> Unit
 ) {
     val context = LocalContext.current
-    val isMyMessage = message.senderUid == currentUser?.uid
+    val isMyMessage = message.senderUid == uid
     val isEventOwner = eventOwnerUid == message.senderUid
     var sentYesterday = false
 
     val sdf: SimpleDateFormat? = if (message.timestamp == null) {
         null
     } else if (Timestamp.now()
-            .toDate().time - ((message.timestamp as? Timestamp)?.toDate()?.time?:0L) < TimeUnit.DAYS.toMillis(
+            .toDate().time - ((message.timestamp as? Timestamp)?.toDate()?.time
+            ?: 0L) < TimeUnit.DAYS.toMillis(
             1
         )
     ) {
         SimpleDateFormat("HH:mm", Locale.getDefault())
     } else {
         if (Timestamp.now()
-                .toDate().time - ((message.timestamp as? Timestamp)?.toDate()?.time?:0L) < TimeUnit.DAYS.toMillis(2)
+                .toDate().time - ((message.timestamp as? Timestamp)?.toDate()?.time
+                ?: 0L) < TimeUnit.DAYS.toMillis(2)
         ) {
             sentYesterday = true
             SimpleDateFormat("HH:mm", Locale.getDefault())
         } else if (Timestamp.now()
-                .toDate().time - ((message.timestamp as? Timestamp)?.toDate()?.time?:0L) < TimeUnit.DAYS.toMillis(365)
+                .toDate().time - ((message.timestamp as? Timestamp)?.toDate()?.time
+                ?: 0L) < TimeUnit.DAYS.toMillis(365)
         ) {
             SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
         } else {
@@ -722,16 +789,16 @@ fun MessageRow(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
-                    .padding(10.dp)
+                    .padding(horizontal = 10.dp)
                     .align(Alignment.End)
             ) {
                 Column(horizontalAlignment = Alignment.End) {
                     Surface(
                         shape = RoundedCornerShape(
-                            bottomEnd = 3.dp,
-                            bottomStart = 20.dp,
-                            topEnd = 20.dp,
-                            topStart = 20.dp
+                            bottomEnd = 1.dp,
+                            bottomStart = 13.dp,
+                            topEnd = 13.dp,
+                            topStart = 13.dp
                         ),
                         color = MaterialTheme.colorScheme.surfaceTint
                     ) {
@@ -739,7 +806,11 @@ fun MessageRow(
                     }
                     if (sdf != null) {
                         Text(
-                            "${if (sentYesterday) "${stringResource(R.string.yesterday)}, " else ""}${sdf.format((message.timestamp as? Timestamp)?.toDate()?: Date(0))}",
+                            "${if (sentYesterday) "${stringResource(R.string.yesterday)}, " else ""}${
+                                sdf.format(
+                                    (message.timestamp as? Timestamp)?.toDate() ?: Date(0)
+                                )
+                            }",
                             color = Color.Gray,
                             style = MaterialTheme.typography.labelSmall
                         )
@@ -749,88 +820,157 @@ fun MessageRow(
 
         } else {
             Row(
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 modifier = Modifier
-                    .heightIn(min = 80.dp)
                     .fillMaxWidth(0.8f)
-                    .padding(10.dp)
+                    .padding(horizontal = 10.dp)
                     .clickable { reportUser() }
             ) {
-                Box(
-                    Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                ) {
-                    if (message.senderPhotoUrl != null) {
-                        GlideImageLoader(
-                            message.senderPhotoUrl,
-                            context = context,
-                            Modifier.matchParentSize()
-                        )
-                    } else {
-                        Image(
-                            imageVector = Icons.Rounded.Person,
-                            contentDescription = "user",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(Color.LightGray)
-                        )
-                    }
-                }
-                Column {
-                    Surface(
-                        shape = RoundedCornerShape(
-                            bottomStart = 3.dp,
-                            bottomEnd = 20.dp,
-                            topEnd = 20.dp,
-                            topStart = 20.dp
-                        ),
-                        color = MaterialTheme.colorScheme.secondaryContainer
+                if (isFirstMessageOfUser) {
+                    Box(
+                        Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(
-                                start = 10.dp,
-                                end = 10.dp,
-                                top = 7.dp,
-                                bottom = 10.dp
+                        if (message.senderPhotoUrl != null) {
+                            GlideImageLoader(
+                                message.senderPhotoUrl,
+                                context = context,
+                                Modifier.matchParentSize()
                             )
+                        } else {
+                            Image(
+                                imageVector = Icons.Rounded.Person,
+                                contentDescription = "user",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .background(Color.LightGray)
+                            )
+                        }
+                    }
+                    Column(modifier = Modifier.padding(top = 30.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(
+                                topStart = 1.dp,
+                                bottomEnd = 13.dp,
+                                topEnd = 13.dp,
+                                bottomStart = 13.dp
+                            ),
+                            color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
-                            if (isEventOwner) {
+                            Column(
+                                modifier = Modifier.padding(
+                                    start = 10.dp,
+                                    end = 10.dp,
+                                    top = 7.dp,
+                                    bottom = 10.dp
+                                )
+                            ) {
+                                if (isEventOwner) {
+                                    Text(
+                                        stringResource(R.string.event_owner),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Green2.copy(red = 0.2f, blue = 0.2f, green = 0.4f),
+                                        modifier = Modifier
+                                            .background(Green2, RoundedCornerShape(6.dp))
+                                            .padding(1.dp)
+                                    )
+                                }
                                 Text(
-                                    stringResource(R.string.event_owner),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Green2.copy(red = 0.2f, blue = 0.2f, green = 0.4f),
-                                    modifier = Modifier
-                                        .background(Green2, RoundedCornerShape(6.dp))
-                                        .padding(1.dp)
+                                    message.senderUsername ?: "",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    message.message,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                             }
+
+                        }
+                        if (sdf != null) {
                             Text(
-                                message.senderUsername ?: "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
+                                "${if (sentYesterday) "${stringResource(R.string.yesterday)}, " else ""}${
+                                    sdf.format(
+                                        (message.timestamp as? Timestamp)?.toDate() ?: Date(0)
+                                    )
+                                }",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .align(Alignment.Start)
                             )
-                            Text(
-                                message.message,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+
                         }
 
                     }
-                    if (sdf != null) {
-                        Text(
-                            "${if (sentYesterday) "${stringResource(R.string.yesterday)}, " else ""}${sdf.format((message.timestamp as? Timestamp)?.toDate()?:Date(0))}",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier
-                                .align(Alignment.End)
-                                .padding(bottom = 12.dp)
-                        )
+                } else {
+                    Box(
+                        Modifier
+                            .width(40.dp)
+                            .clip(CircleShape)
+                    ) {
 
                     }
+                    Column {
+                        Surface(
+                            shape = RoundedCornerShape(
+                                bottomStart = 13.dp,
+                                bottomEnd = 13.dp,
+                                topEnd = 13.dp,
+                                topStart = 13.dp
+                            ),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(
+                                    start = 10.dp,
+                                    end = 10.dp,
+                                    top = 7.dp,
+                                    bottom = 10.dp
+                                )
+                            ) {
+                                /*if (isEventOwner) {
+                                    Text(
+                                        stringResource(R.string.event_owner),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Green2.copy(red = 0.2f, blue = 0.2f, green = 0.4f),
+                                        modifier = Modifier
+                                            .background(Green2, RoundedCornerShape(6.dp))
+                                            .padding(1.dp)
+                                    )
+                                }
+                                Text(
+                                    message.senderUsername ?: "",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )*/
+                                Text(
+                                    message.message,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
 
+                        }
+                        if (sdf != null) {
+                            Text(
+                                "${if (sentYesterday) "${stringResource(R.string.yesterday)}, " else ""}${
+                                    sdf.format(
+                                        (message.timestamp as? Timestamp)?.toDate() ?: Date(0)
+                                    )
+                                }",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier
+                                    .align(Alignment.Start)
+                                    .padding(bottom = 2.dp)
+                            )
+
+                        }
+
+                    }
                 }
 
             }
@@ -844,28 +984,91 @@ fun MessageRow(
 @Preview(showSystemUi = true)
 @Composable
 private fun EventChatPreview() {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-        /*MessageRow(
-            message = Message(
-                message = "merhaba",
-                timestamp = Timestamp(
-                    LocalDateTime.of(2023, 11, 23, 11, 1, 20, 20).toInstant(
-                    ZoneOffset.UTC)),
-                senderUsername = "furkan"
-            ),
-            eventOwnerUid = "uid",
-            currentUser = "uid",
-            messageSentResource = Resource.Idle()
-        )*/
-        Text(
-            "username",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold
+    val newMessagesData = listOf(
+        Message(
+            senderUid = "arif",
+            senderUsername = "arif",
+            message = "mesaj 1",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 26).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "arif",
+            senderUsername = "arif",
+            message = "mesaj 2",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 25).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "0",
+            senderUsername = "0",
+            message = "mesaj 3",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 24).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "0",
+            senderUsername = "0",
+            message = "mesaj 4",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 23).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "arif",
+            senderUsername = "arif",
+            message = "mesaj 6",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 22).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "arif",
+            senderUsername = "arif",
+            message = "mesaj 7",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 21).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "arif",
+            senderUsername = "arif",
+            message = "mesaj 8",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 20).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "berkan",
+            senderUsername = "berkan",
+            message = "mesaj 9",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 19).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "cemile",
+            senderUsername = "cemile",
+            message = "mesaj 10",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 18).toInstant(ZoneOffset.UTC))
+        ),
+        Message(
+            senderUid = "cemile",
+            senderUsername = "cemile",
+            message = "mesaj 11",
+            timestamp = Timestamp(LocalDateTime.of(2025, 1, 6, 20, 17).toInstant(ZoneOffset.UTC))
         )
-        Text(
-            "message",
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
+    )
+
+    val eventData = Event(
+        title = "event"
+    )
+
+    EventChatContent(
+        newMessagesResource = Resource.Success(data = newMessagesData),
+        pagedMessagesResource = Resource.Idle(),
+        eventResource = Resource.Success(data = eventData),
+        messageSentResource = Resource.Idle(),
+        numOfParticipantsText = "20",
+        messagesLoaded = true,
+        thereIsOldestMessageDoc = true,
+        setMessagesLoaded = {},
+        changeChatRestriction = {},
+        onBackClick = {},
+        getMessages = {},
+        messages = emptyList(),
+        reportUserDialog = null,
+        setReportUserDialog = {},
+        sendMessage = {},
+        sendReport = { _, _ -> },
+        uid = "0"
+    )
 
 }

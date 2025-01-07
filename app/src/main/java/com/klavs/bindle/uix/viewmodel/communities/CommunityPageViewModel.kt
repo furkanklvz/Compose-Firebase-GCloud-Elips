@@ -210,12 +210,9 @@ class CommunityPageViewModel @Inject constructor(
         }
     }
 
-    fun deleteTheCommunity(communityId: String) {
+    fun deleteTheCommunity(communityId: String, uid: String) {
         viewModelScope.launch(Dispatchers.Main) {
-            val eventRef = db.collection("communities").document(communityId)
-            firestoreRepo.deleteDocument(
-                documentRef = eventRef
-            )
+            firestoreRepo.deleteTheCommunity(communityId, uid)
         }
     }
 

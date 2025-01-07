@@ -49,6 +49,7 @@ interface FirestoreDataSource {
     suspend fun searchDocumentByFieldNameStartWith(query: Query, field: String, startWith: String): Resource<QuerySnapshot>
     suspend fun getEventsNearMe(latLng: LatLng): Resource<List<Event>>
     suspend fun cancelTheEvent(eventId: String, uid: String)
+    suspend fun deleteTheCommunity(communityId: String, uid: String)
     suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long)
     suspend fun sendJoinRequestForCommunity(communityId: String, myUid: String, newTickets: Long)
     suspend fun rejectRequestForCommunity(communityId: String, uid: String): Resource<String>

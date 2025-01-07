@@ -650,6 +650,20 @@ class FirestoreDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteTheCommunity(communityId: String, uid: String) {
+        try {
+            val communityRef = db.collection("communities").document(communityId)
+            val memberRef = db.collection("communities").document(communityId).collection("members").document(uid)
+            val batch = db.batch()
+            batch.delete(communityRef)
+            batch.delete(memberRef)
+            batch.commit().await()
+        }catch (e:Exception){
+            FirebaseCrashlytics.getInstance().recordException(e)
+        }
+
+    }
+
     override suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long) {
         try {
             val memberRef =
