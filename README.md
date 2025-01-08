@@ -41,7 +41,7 @@
 
 ---
 
-## 🌐 Web Sitesi
+## 🌐 Web Sitesi ve Ekran Görüntüleri 📸
 [Uygulamanın Web Sitesini Ziyaret Edin](https://sites.google.com/view/bindle/main-page)
 
 ---
