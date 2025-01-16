@@ -10,8 +10,11 @@ import com.klavs.bindle.R
 import com.klavs.bindle.resource.Resource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
 
-class PurchasesUpdatedListenerImpl : PurchasesUpdatedListener {
+class PurchasesUpdatedListenerImpl @Inject constructor(
+    private val crashlytics:FirebaseCrashlytics
+) : PurchasesUpdatedListener {
 
     private val _updatePurchaseResource = MutableStateFlow<Resource<Purchase>>(Resource.Idle())
     val updatePurchaseResource = _updatePurchaseResource.asStateFlow()
@@ -33,7 +36,7 @@ class PurchasesUpdatedListenerImpl : PurchasesUpdatedListener {
                     Resource.Success(data = purchase)
             } else {
                 Log.e("Billing error", "satın alınamadı: ${purchase.products.first()}")
-                FirebaseCrashlytics.getInstance().log("Satın alma başarısız: ${billingResult.debugMessage}")
+                crashlytics.log("Satın alma başarısız: ${billingResult.debugMessage}")
                 _updatePurchaseResource.value =
                     Resource.Error(messageResource = R.string.purchase_canceled)
             }
@@ -43,7 +46,7 @@ class PurchasesUpdatedListenerImpl : PurchasesUpdatedListener {
                 Resource.Error(messageResource = R.string.purchase_canceled)
         } else {
             Log.e("Billing error", "satın alma başarısız: ${billingResult.debugMessage}")
-            FirebaseCrashlytics.getInstance().log("Satın alma başarısız: ${billingResult.debugMessage}")
+            crashlytics.log("Satın alma başarısız: ${billingResult.debugMessage}")
             _updatePurchaseResource.value =
                 Resource.Error(messageResource = R.string.something_went_wrong)
         }

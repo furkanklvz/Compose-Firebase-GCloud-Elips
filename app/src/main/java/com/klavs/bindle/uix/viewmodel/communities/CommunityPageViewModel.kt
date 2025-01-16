@@ -39,7 +39,8 @@ class CommunityPageViewModel @Inject constructor(
     private val firestoreRepo: FirestoreRepository,
     private val storageRepo: StorageRepository,
     private val db: FirebaseFirestore,
-    private val appPref: AppPref
+    private val appPref: AppPref,
+    private val crashlytics: FirebaseCrashlytics
 ) : ViewModel() {
 
 
@@ -190,22 +191,24 @@ class CommunityPageViewModel @Inject constructor(
         }
     }
 
-    fun sendJoinRequest(communityId: String, myUid: String, newTickets: Long) {
+    fun sendJoinRequest(communityId: String, myUid: String, newTickets: Long, username: String) {
         viewModelScope.launch(Dispatchers.Main) {
             firestoreRepo.sendJoinRequestForCommunity(
                 communityId = communityId,
                 myUid = myUid,
-                newTickets = newTickets
+                newTickets = newTickets,
+                username = username
             )
         }
     }
 
-    fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long) {
+    fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long, username: String) {
         viewModelScope.launch(Dispatchers.Main) {
             firestoreRepo.joinTheCommunity(
                 communityId = communityId,
                 myUid = myUid,
-                newTickets = newTickets
+                newTickets = newTickets,
+                username = username
             )
         }
     }
@@ -569,7 +572,7 @@ class CommunityPageViewModel @Inject constructor(
                 changeAdminState.value = Resource.Success(data = uid)
             } catch (e: Exception) {
                 Log.e("error from datasource", "changeAdmin: $e")
-                FirebaseCrashlytics.getInstance().recordException(e)
+                crashlytics.recordException(e)
                 changeAdminState.value =
                     Resource.Error(messageResource = R.string.something_went_wrong_try_again_later)
             }

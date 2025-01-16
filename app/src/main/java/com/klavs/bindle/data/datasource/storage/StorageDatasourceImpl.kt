@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.storage.FirebaseStorage
 import com.klavs.bindle.R
 import com.klavs.bindle.resource.Resource
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 class StorageDatasourceImpl @Inject constructor(
     private val storage: FirebaseStorage,
-    private val context: Context
+    private val context: Context,
+    private val crashlytics: FirebaseCrashlytics
 ) : StorageDatasource {
     override suspend fun uploadImage(imageUri: Uri, path: String, maxSize: Int): Resource<Uri> {
         return try {
@@ -24,8 +26,8 @@ class StorageDatasourceImpl @Inject constructor(
             val result = ref.putBytes(resizedImage).await()
             val downloadUrl = result.storage.downloadUrl.await()
             Resource.Success(data = downloadUrl)
-
         } catch (e: Exception) {
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }

@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.google.firebase.auth.AuthResult
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.klavs.bindle.data.repo.auth.AuthRepository
 import com.klavs.bindle.data.repo.messaging.MessagingRepository
 import com.klavs.bindle.resource.Resource

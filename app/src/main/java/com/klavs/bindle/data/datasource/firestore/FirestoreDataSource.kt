@@ -50,8 +50,8 @@ interface FirestoreDataSource {
     suspend fun getEventsNearMe(latLng: LatLng): Resource<List<Event>>
     suspend fun cancelTheEvent(eventId: String, uid: String)
     suspend fun deleteTheCommunity(communityId: String, uid: String)
-    suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long)
-    suspend fun sendJoinRequestForCommunity(communityId: String, myUid: String, newTickets: Long)
+    suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long, username: String)
+    suspend fun sendJoinRequestForCommunity(communityId: String, myUid: String, newTickets: Long, username: String)
     suspend fun rejectRequestForCommunity(communityId: String, uid: String): Resource<String>
     suspend fun rejectRequestForEvent(eventId: String, uid: String): Resource<String>
     suspend fun getSuggestedCommunities(limit: Int, lastDoc: DocumentSnapshot?): Resource<Pair<List<Community>,DocumentSnapshot?>>

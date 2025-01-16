@@ -22,7 +22,8 @@ import kotlin.random.Random
 
 class MessagingDataSourceImpl @Inject constructor(
     private val context: Context, private val messaging: FirebaseMessaging,
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val crashlytics: FirebaseCrashlytics
 ) : MessagingDataSource {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         when (remoteMessage.data["type"]) {
@@ -121,15 +122,15 @@ class MessagingDataSourceImpl @Inject constructor(
                 val tokenInFirestore = userDoc.getString("fcmToken")
                 if (tokenInFirestore != token) {
                     db.collection("users").document(uid).update("fcmToken", token).await()
-                    FirebaseCrashlytics.getInstance().log("fcmToken updated: $token")
+                    crashlytics.log("fcmToken updated: $token")
                     Log.e("fcm", "fcmToken updated: $token")
                 } else {
-                    FirebaseCrashlytics.getInstance().log("fcmToken is same: $token")
+                    crashlytics.log("fcmToken is same: $token")
                     Log.e("fcm", "fcmToken is same: $token")
                 }
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", "Failed to update token: ${e.message}")
         }
     }

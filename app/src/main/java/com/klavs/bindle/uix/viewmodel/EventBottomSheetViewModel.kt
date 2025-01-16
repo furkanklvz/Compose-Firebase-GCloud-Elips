@@ -68,12 +68,13 @@ class EventBottomSheetViewModel @Inject constructor(
     }
 
 
-    fun sendRequest(eventId: String, myUid: String, newTickets: Long) {
+    fun sendRequest(eventId: String, myUid: String, newTickets: Long, username: String) {
         viewModelScope.launch(Dispatchers.Main) {
             val requestsRef = db.collection("events").document(eventId).collection("requests")
             val requestModel = hashMapOf(
                 "uid" to myUid,
-                "timestamp" to Timestamp.now()
+                "timestamp" to Timestamp.now(),
+                "username" to username
             )
             val result = firestoreRepo.addDocument(
                 documentName = myUid,
@@ -91,14 +92,15 @@ class EventBottomSheetViewModel @Inject constructor(
         }
     }
 
-    fun participateTheEvent(eventId: String, ownerUid: String, myUid: String, newTickets: Long) {
+    fun participateTheEvent(eventId: String, ownerUid: String, myUid: String, newTickets: Long, username: String) {
         viewModelScope.launch(Dispatchers.Main) {
             val participantsRef =
                 db.collection("events").document(eventId).collection("participants")
             val participantModel = hashMapOf(
                 "uid" to myUid,
                 "date" to null,
-                "ownerUid" to ownerUid
+                "ownerUid" to ownerUid,
+                "username" to username
             )
             val result = firestoreRepo.addDocument(
                 documentName = myUid,

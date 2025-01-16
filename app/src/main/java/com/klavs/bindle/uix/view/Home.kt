@@ -112,7 +112,7 @@ import com.klavs.bindle.uix.view.event.getEventIconFromValue
 import com.klavs.bindle.uix.viewmodel.HomeViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.util.EventBottomSheet
-import com.klavs.bindle.util.TicketDialog
+import com.klavs.bindle.util.TicketBottomSheet
 import com.klavs.bindle.util.TimeFunctions
 import com.klavs.bindle.util.UnverifiedAccountAlertDialog
 import com.klavs.bindle.util.UtilFunctions
@@ -246,10 +246,7 @@ fun Home(
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = true
                 }
-                // Avoid multiple copies of the same destination when
-                // reselecting the same item
                 launchSingleTop = true
-                // Restore state when reselecting a previously selected item
                 restoreState = true
             }
         },
@@ -289,7 +286,6 @@ fun Home(
         scope = scope,
         snackBarHostState = snackBarHostState
     )
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -321,7 +317,8 @@ private fun HomeContent(
 ) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-    var showTicketDialog by remember { mutableStateOf(false) }
+    var showTicketBottomSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showCommunitiesBottomSheet by rememberSaveable { mutableStateOf(false) }
     val communitiesBottomSheetState = rememberModalBottomSheetState()
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
@@ -340,11 +337,6 @@ private fun HomeContent(
                     containerColor = BottomAppBarDefaults.containerColor
                 ),
                 actions = {
-                    /*FilledTonalButton(
-                        onClick = { navController.navigate("greeting") }
-                    ) {
-                        Text("Greeting Page")
-                    }*/
                     if (currentUser != null && userResource is Resource.Success) {
                         FilledTonalButton(
                             contentPadding = PaddingValues(0.dp),
@@ -354,7 +346,7 @@ private fun HomeContent(
                             ),
                             shape = ButtonDefaults.squareShape,
                             onClick = {
-                                showTicketDialog = true
+                                showTicketBottomSheet = true
                             }
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -375,15 +367,16 @@ private fun HomeContent(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painterResource(R.drawable.logo_no_background),
-                            contentDescription = "Bindle",
+                            contentDescription = "Elips",
                             modifier = Modifier
                                 .padding(end = 10.dp)
-                                .size(IconButtonDefaults.xSmallIconSize),
+                                .size(IconButtonDefaults.mediumIconSize),
                             contentScale = ContentScale.Crop
                         )
                         Text(
-                            stringResource(R.string.app_name), fontFamily = logoFont,
-                            style = MaterialTheme.typography.titleMedium,
+                            stringResource(R.string.app_name),
+                            fontFamily = logoFont,
+                            style = MaterialTheme.typography.titleLarge
                         )
                     }
                 })
@@ -418,12 +411,29 @@ private fun HomeContent(
             }
             if (showEventBottomSheet != null) {
                 EventBottomSheet(
-                    onDismiss = { showEventBottomSheet = null },
+                    onDismiss = {
+                        scope.launch {
+                            eventBottomSheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!eventBottomSheetState.isVisible) {
+                                showEventBottomSheet = null
+                            }
+                        }
+                    },
                     sheetState = eventBottomSheetState,
                     event = showEventBottomSheet!!,
                     onCommunityClick = { onCommunityClick(it) },
                     navHostViewModel = navHostViewModel!!,
-                    showTicketDialog = { showTicketDialog = true },
+                    showTicketSheet = {
+                        scope.launch {
+                            eventBottomSheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!eventBottomSheetState.isVisible) {
+                                showEventBottomSheet = null
+                                showTicketBottomSheet = true
+                            }
+                        }
+                    },
                     currentUser = currentUser,
                     navigateToEventPage = { navigateToEventPage(it) },
                     showUnverifiedAccountAlertDialog = { showUnverifiedAccountAlertDialog = true },
@@ -431,13 +441,19 @@ private fun HomeContent(
                     onLogInClick = onLoginClick
                 )
             }
-            if (showTicketDialog) {
+            if (showTicketBottomSheet) {
                 if (currentUser != null && userResource is Resource.Success) {
-                    TicketDialog(
-                        onDismiss = { showTicketDialog = false },
+                    TicketBottomSheet(
+                        onDismiss = {
+                            scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                                if (!ticketSheetState.isVisible) {
+                                    showTicketBottomSheet = false
+                                }
+                            }
+                        },
                         uid = currentUser.uid,
                         tickets = userResource.data!!.tickets,
-                        paddingValues = innerPadding
+                        sheetState = ticketSheetState
                     )
                 }
             }
@@ -884,7 +900,7 @@ private fun PopularCommunities(
                                     )
                             ) {
                                 if (community.communityPictureUrl != null) {
-                                    GlideImageLoader(
+                                    CoilImageLoader(
                                         url = community.communityPictureUrl,
                                         context = context,
                                         modifier = Modifier.matchParentSize()
@@ -995,7 +1011,7 @@ private fun PopularCommunitiesBottomSheet(
                                     )
                             ) {
                                 if (community.communityPictureUrl != null) {
-                                    GlideImageLoader(
+                                    CoilImageLoader(
                                         url = community.communityPictureUrl,
                                         context = context,
                                         modifier = Modifier.matchParentSize()
@@ -1283,7 +1299,7 @@ private fun UpcomingEventsHome(
 @Preview(showSystemUi = true, locale = "tr")
 @Composable
 fun HomePreview() {
-    val upcomingEventList = listOf(
+    /*val upcomingEventList = listOf(
         Event(
             title = "Bisiklet Turu",
             type = EventType.Sport.value,
@@ -1320,7 +1336,7 @@ fun HomePreview() {
                 ).toInstant(ZoneOffset.UTC)
             )
         ),
-    ).sortedBy { it.date }
+    ).sortedBy { it.date }*/
     val nearEventList = listOf(
         Event(
             title = "Bisiklet Turu",

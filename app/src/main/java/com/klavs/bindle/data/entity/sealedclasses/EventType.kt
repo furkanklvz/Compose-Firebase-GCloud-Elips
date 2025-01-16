@@ -1,15 +1,6 @@
 package com.klavs.bindle.data.entity.sealedclasses
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Cake
-import androidx.compose.material.icons.outlined.Calculate
-import androidx.compose.material.icons.outlined.Celebration
-import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Handshake
-import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material.icons.outlined.Nature
-import androidx.compose.material.icons.outlined.SportsTennis
-import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.Celebration

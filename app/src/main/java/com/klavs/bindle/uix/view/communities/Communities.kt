@@ -61,6 +61,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.*
@@ -80,25 +81,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.net.toUri
 import androidx.navigation.NavHostController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade
-import com.bumptech.glide.request.RequestOptions
 import com.google.firebase.auth.FirebaseUser
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.community.Community
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.data.entity.community.JoinedCommunity
 import com.klavs.bindle.resource.Resource
-import com.klavs.bindle.uix.view.GlideImageLoader
+import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.view.communities.communityPage.LeavingDialog
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.communities.CommunityViewModel
-import com.klavs.bindle.util.TicketDialog
+import com.klavs.bindle.util.TicketBottomSheet
 import com.klavs.bindle.util.UnverifiedAccountAlertDialog
-import com.skydoves.landscapist.glide.GlideImage
 import kotlinx.coroutines.launch
 
 
@@ -115,7 +110,8 @@ fun Communities(
     val context = LocalContext.current
     var searchText by rememberSaveable { mutableStateOf("") }
     val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
-    var showTicketDialog by remember { mutableStateOf(false) }
+    var showTicketSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
     val communitiesResource by viewModel.communities.collectAsState()
     val pinnedCommunities by viewModel.pinnedCommunities.collectAsState()
@@ -227,7 +223,7 @@ fun Communities(
                             if (userResourceFlow is Resource.Success && userResourceFlow.data != null) {
                                 if (currentUser.isEmailVerified) {
                                     if (userResourceFlow.data!!.tickets < 3) {
-                                        showTicketDialog = true
+                                        showTicketSheet = true
                                     } else {
                                         Log.e(
                                             "communities",
@@ -279,12 +275,18 @@ fun Communities(
                     navController.navigate("menu_profile")
                 }
             }
-            if (showTicketDialog && currentUser != null) {
-                TicketDialog(
-                    onDismiss = { showTicketDialog = false },
+            if (showTicketSheet && currentUser != null) {
+                TicketBottomSheet(
+                    onDismiss = {
+                        scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                            if (!ticketSheetState.isVisible) {
+                                showTicketSheet = false
+                            }
+                        }
+                    },
                     uid = currentUser.uid,
                     tickets = userResourceFlow.data!!.tickets,
-                    paddingValues = innerPadding
+                    sheetState = ticketSheetState
                 )
             }
             if (searchBarExpanded) {
@@ -445,7 +447,7 @@ private fun SearchContent(
                                                     .background(Color.LightGray)
                                             )
                                         } else {
-                                            GlideImageLoader(
+                                            CoilImageLoader(
                                                 url = community.communityPictureUrl,
                                                 context = context,
                                                 modifier = Modifier.matchParentSize()
@@ -604,7 +606,7 @@ private fun Content(
 
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CommunityRow(
     community: JoinedCommunity,
@@ -630,7 +632,7 @@ fun CommunityRow(
                 .size(50.dp)
                 .clip(CircleShape)) {
                 if (community.communityPictureUrl != null) {
-                    GlideImageLoader(
+                    CoilImageLoader(
                         url = community.communityPictureUrl,
                         context = context,
                         modifier = Modifier.matchParentSize()

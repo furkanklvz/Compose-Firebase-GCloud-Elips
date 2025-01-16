@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -68,11 +67,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
+import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade
-import com.bumptech.glide.request.RequestOptions
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -84,8 +82,6 @@ import com.klavs.bindle.data.entity.Post
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
-import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
-import com.skydoves.landscapist.glide.GlideImage
 import kotlinx.coroutines.launch
 
 @OptIn(
@@ -234,35 +230,16 @@ fun CreatePost(
                                     .background(Color.LightGray, CircleShape)
                             )
                         } else {
-                            GlideImage(
-                                imageModel = { currentUser.photoUrl },
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(currentUser.photoUrl)
+                                    .crossfade(true)
+                                    .build(),
                                 modifier = Modifier
                                     .matchParentSize()
                                     .clip(CircleShape),
-                                requestBuilder = {
-                                    val thumbnailRequest = Glide
-                                        .with(context)
-                                        .asBitmap()
-                                        .load(currentUser.photoUrl)
-                                        .apply(RequestOptions().override(100))
-
-                                    Glide
-                                        .with(context)
-                                        .asBitmap()
-                                        .apply(
-                                            RequestOptions()
-                                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                        )
-                                        .thumbnail(thumbnailRequest)
-                                        .transition(withCrossFade())
-                                },
-                                loading = {
-                                    CircularWavyProgressIndicator(
-                                        modifier = Modifier
-                                            .fillMaxSize(0.5f)
-                                            .align(Alignment.Center)
-                                    )
-                                }
+                                contentScale = ContentScale.Crop,
+                                contentDescription = currentUser.displayName
                             )
                         }
                     }
@@ -357,7 +334,7 @@ fun CreatePost(
                         Image(
                             painter = rememberAsyncImagePainter(model = selectedImageUri),
                             contentDescription = "image",
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))

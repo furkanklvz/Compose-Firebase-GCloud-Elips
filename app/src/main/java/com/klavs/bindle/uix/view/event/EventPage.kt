@@ -109,7 +109,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
@@ -123,13 +122,12 @@ import com.klavs.bindle.data.entity.User
 import com.klavs.bindle.data.entity.community.Community
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
-import com.klavs.bindle.uix.view.GlideImageLoader
+import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.event.EventsViewModel
 import com.klavs.bindle.util.Constants
-import com.klavs.bindle.util.TicketDialog
+import com.klavs.bindle.util.TicketBottomSheet
 import com.klavs.bindle.util.UnverifiedAccountAlertDialog
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -142,10 +140,10 @@ fun EventPage(
     navController: NavHostController,
     eventId: String,
     currentUser: FirebaseUser,
+    viewModel: EventsViewModel,
     navHostViewModel: NavHostViewModel
 ) {
     val context = LocalContext.current
-    val viewModel: EventsViewModel = hiltViewModel()
     val owner by viewModel.eventOwner.collectAsState()
     val scope = rememberCoroutineScope()
     val snackBarHostState = remember { SnackbarHostState() }
@@ -157,7 +155,6 @@ fun EventPage(
     var showRequests by remember { mutableStateOf(false) }
     var showCancelAlertDialog by remember { mutableStateOf(false) }
     var showLeaveAlertDialog by remember { mutableStateOf(false) }
-    var showTicketDialog by remember { mutableStateOf(false) }
     val participantsMBSState = rememberModalBottomSheetState()
     var showParticipants by remember { mutableStateOf(false) }
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
@@ -236,17 +233,15 @@ fun EventPage(
             if (it) {
                 showParticipants = true
             } else {
-
                 scope.launch { participantsMBSState.hide() }.invokeOnCompletion {
                     if (!participantsMBSState.isVisible) {
                         showParticipants = false
+                        viewModel.lastParticipantDoc.value = null
                     }
                 }
-                viewModel.lastParticipantDoc.value = null
+
             }
         },
-        ticketDialogIsShown = showTicketDialog,
-        showTicketDialog = { showTicketDialog = it },
         userResourceFlow = userResourceFlow,
         participantsResource = participantsResource,
         removeParticipantsResource = removeParticipantsResource,
@@ -272,17 +267,17 @@ fun EventPage(
             scope.launch { requestsMBSState.hide() }.invokeOnCompletion {
                 if (!requestsMBSState.isVisible) {
                     showRequests = false
+                    viewModel.lastRequestDoc.value = null
+                    viewModel.acceptResource.value = Resource.Idle()
+                    viewModel.rejectResource.value = Resource.Idle()
+                    viewModel.getNumberOfRequests(
+                        eventId = eventId
+                    )
+                    viewModel.getCountTheParticipants(
+                        eventId = eventId
+                    )
                 }
             }
-            viewModel.lastRequestDoc.value = null
-            viewModel.acceptResource.value = Resource.Idle()
-            viewModel.rejectResource.value = Resource.Idle()
-            viewModel.getNumberOfRequests(
-                eventId = eventId
-            )
-            viewModel.getCountTheParticipants(
-                eventId = eventId
-            )
         },
         owner = owner,
         acceptReqeust = {
@@ -339,8 +334,6 @@ private fun EventPageContent(
     showParticipants: (Boolean) -> Unit,
     cancelTheEvent: () -> Unit,
     leaveTheEvent: () -> Unit,
-    ticketDialogIsShown: Boolean,
-    showTicketDialog: (Boolean) -> Unit,
     userResourceFlow: Resource<User>,
     navigateToEditEvent: () -> Unit,
     onBackClick: () -> Unit,
@@ -373,7 +366,10 @@ private fun EventPageContent(
     thereIsLastParticipantDoc: Boolean,
     thereIsLastRequestDoc: Boolean
 ) {
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var showTicketSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     Scaffold(
         snackbarHost = { SnackbarHost(snackBarHostState) },
         floatingActionButton = {
@@ -562,13 +558,17 @@ private fun EventPageContent(
                     navigateToProfile()
                 }
             }
-            if (ticketDialogIsShown) {
+            if (showTicketSheet) {
                 if (userResourceFlow is Resource.Success) {
-                    TicketDialog(
-                        onDismiss = { showTicketDialog(false) },
+                    TicketBottomSheet(
+                        onDismiss = { scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                            if (!ticketSheetState.isVisible){
+                                showTicketSheet = false
+                            }
+                        } },
                         uid = currentUserUid,
                         tickets = userResourceFlow.data!!.tickets,
-                        paddingValues = innerPadding
+                        sheetState = ticketSheetState
                     )
 
                 }
@@ -863,7 +863,7 @@ private fun EventPageContent(
                                         .clip(CircleShape)
                                 ) {
                                     if (owner.data?.profilePictureUrl != null) {
-                                        GlideImageLoader(
+                                        CoilImageLoader(
                                             owner.data.profilePictureUrl,
                                             context = context,
                                             modifier = Modifier.matchParentSize()
@@ -1002,7 +1002,7 @@ private fun EventPageContent(
                                                                     .clip(CircleShape)
                                                             ) {
                                                                 if (community.communityPictureUrl != null) {
-                                                                    GlideImageLoader(
+                                                                    CoilImageLoader(
                                                                         community.communityPictureUrl,
                                                                         context = context,
                                                                         modifier = Modifier.matchParentSize()
@@ -1289,7 +1289,7 @@ private fun ParticipantRow(
                     .clip(CircleShape)
             ) {
                 if (participant.profilePictureUrl != null) {
-                    GlideImageLoader(
+                    CoilImageLoader(
                         url = participant.profilePictureUrl,
                         context = context,
                         modifier = Modifier.matchParentSize()
@@ -1545,7 +1545,7 @@ private fun RequestRow(
                     .clip(CircleShape)
             ) {
                 if (request.photoUrl != null) {
-                    GlideImageLoader(
+                    CoilImageLoader(
                         url = request.photoUrl,
                         context = context,
                         modifier = Modifier.matchParentSize()
@@ -1654,8 +1654,6 @@ private fun EventPagePreview() {
         participantsIsShown = false,
         showParticipants = {},
         cancelTheEvent = {},
-        ticketDialogIsShown = false,
-        showTicketDialog = {},
         userResourceFlow = Resource.Success(data = User(uid = "0", userName = "furkan")),
         navigateToEditEvent = {},
         onBackClick = {},

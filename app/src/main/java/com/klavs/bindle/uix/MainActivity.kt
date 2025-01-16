@@ -663,11 +663,13 @@ private fun NavHostWithBottomNavigation(
                     LaunchedEffect(true) {
                         bottomBarIsEnable = false
                     }
+                    val viewModel = hiltViewModel<EventsViewModel>(navBackStackEntry)
                     EventPage(
                         navController = navController,
                         eventId = navBackStackEntry.arguments?.getString("eventId")!!,
                         currentUser = currentUser!!,
-                        navHostViewModel = navHostViewModel
+                        navHostViewModel = navHostViewModel,
+                        viewModel = viewModel
                     )
                 }
             }

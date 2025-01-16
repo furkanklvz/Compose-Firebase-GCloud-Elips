@@ -18,7 +18,8 @@ import javax.inject.Inject
 
 class LocationDataSourceImpl @Inject constructor(
     private val locationClient: FusedLocationProviderClient,
-    private val context: Context
+    private val context: Context,
+    private val crashlytics: FirebaseCrashlytics
 ) :
     LocationDataSource {
     override suspend fun getCurrentLocation(): Resource<Location> {
@@ -36,7 +37,7 @@ class LocationDataSourceImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("error from datasource", e.localizedMessage ?: "unknown error")
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.location_not_detected)
         }
     }
@@ -52,7 +53,7 @@ class LocationDataSourceImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("error from datasource", e.localizedMessage ?: "unknown error")
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
     }

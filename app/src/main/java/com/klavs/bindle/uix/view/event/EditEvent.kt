@@ -1,11 +1,8 @@
 package com.klavs.bindle.uix.view.event
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +30,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -41,6 +39,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,13 +57,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.google.firebase.Timestamp
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.community.JoinedCommunity
-import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.view.map.BasicInfos
 import com.klavs.bindle.uix.view.map.EventTypeDatas
@@ -74,8 +71,7 @@ import com.klavs.bindle.uix.view.map.SelectCommunityDialog
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.event.EditEventViewModel
 import com.klavs.bindle.util.Constants
-import com.klavs.bindle.util.TicketDialog
-import kotlinx.coroutines.delay
+import com.klavs.bindle.util.TicketBottomSheet
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -94,7 +90,8 @@ fun EditEvent(
     val joinedCommunitiesResource by viewModel.joinedCommunitiesResource.collectAsState()
     val saveEventState by viewModel.changesResource.collectAsState()
     val userResource by navHostViewModel.userResourceFlow.collectAsState()
-    var showTicketDialog by remember { mutableStateOf(false) }
+    var showTicketSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(saveEventState) {
         if (saveEventState is Resource.Success) {
@@ -208,11 +205,11 @@ fun EditEvent(
                                 if (userResource.data!!.tickets >= 1) {
                                     viewModel.saveChanges(
                                         updatedEvent,
-                                        newTickets = userResource.data!!.tickets  - 1,
+                                        newTickets = userResource.data!!.tickets - 1,
                                         uid = myUid
                                     )
                                 } else {
-                                    showTicketDialog = true
+                                    showTicketSheet = true
                                 }
                             } else {
                                 scope.launch { snackbarHostState.showSnackbar(context.getString(R.string.something_went_wrong_try_again_later)) }
@@ -223,10 +220,16 @@ fun EditEvent(
                                 snackbarHostState.showSnackbar(it)
                             }
                         },
-                        showTicketDialog = showTicketDialog,
-                        dismissTicketDialog = { showTicketDialog = false },
+                        showTicketSheet = showTicketSheet,
+                        dismissTicketSheet = {
+                            scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                                if (!ticketSheetState.isVisible) {
+                                    showTicketSheet = false
+                                }
+                            }
+                        },
                         tickets = userResource.data?.tickets ?: 0,
-                        innerPadding = innerPadding
+                        ticketSheetState = ticketSheetState
                     )
                 }
             }
@@ -234,17 +237,18 @@ fun EditEvent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Content(
     linkedCommunities: List<JoinedCommunity>,
     event: Event,
-    showTicketDialog: Boolean,
-    dismissTicketDialog: () -> Unit,
+    showTicketSheet: Boolean,
+    ticketSheetState: SheetState,
+    dismissTicketSheet: () -> Unit,
     communities: Resource<List<JoinedCommunity>>,
     onSaveChanges: (Event) -> Unit,
     showSnackbar: (String) -> Unit,
     getJoinedCommunities: () -> Unit,
-    innerPadding: PaddingValues,
     tickets: Long,
     myUid: String,
 ) {
@@ -279,12 +283,12 @@ private fun Content(
 
 
     Box {
-        if (showTicketDialog){
-            TicketDialog(
-                onDismiss = dismissTicketDialog,
+        if (showTicketSheet){
+            TicketBottomSheet(
+                onDismiss = dismissTicketSheet,
                 uid = myUid,
                 tickets = tickets,
-                paddingValues = innerPadding
+                sheetState = ticketSheetState
             )
         }
         if (openCommunitySelectionDialog) {
@@ -467,7 +471,7 @@ private fun Content(
                                 privateEvent = privateEvent,
                                 onlyByRequest = onlyByRequest,
                                 privateInfo = hideDate,
-                                linkedCommunities = mutableLinkedCommunities.map { it.id!! },
+                                linkedCommunities = mutableLinkedCommunities.map { it.id },
                                 latitude = event.latitude,
                                 longitude = event.longitude,
                                 participantLimit = participantLimit,
@@ -490,6 +494,7 @@ private fun Content(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 private fun EditEventPreview() {
@@ -507,10 +512,10 @@ private fun EditEventPreview() {
                 showSnackbar = {},
                 getJoinedCommunities = {},
                 myUid = "0",
-                showTicketDialog = false,
-                dismissTicketDialog = {},
+                showTicketSheet = false,
+                dismissTicketSheet = {},
                 tickets = 0,
-                innerPadding = PaddingValues(0.dp)
+                ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             )
         }
     }

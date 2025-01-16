@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -69,12 +70,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade
-import com.bumptech.glide.request.RequestOptions
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.klavs.bindle.R
 import com.klavs.bindle.util.TimeFunctions
 import com.klavs.bindle.data.entity.community.Community
@@ -86,8 +84,6 @@ import com.klavs.bindle.ui.theme.Green1
 import com.klavs.bindle.ui.theme.Orange2
 import com.klavs.bindle.uix.view.communities.getRoleNameFromRolePriority
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
-import com.skydoves.landscapist.glide.GlideImage
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,7 +107,7 @@ fun SettingsBottomSheet(
                 isLoading = false
                 Toast.makeText(
                     context,
-                    resource.messageResource?.let { context.getString(it) }?:"",
+                    resource.messageResource?.let { context.getString(it) } ?: "",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -127,6 +123,9 @@ fun SettingsBottomSheet(
     }
 
     ModalBottomSheet(
+        modifier = Modifier.padding(
+            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        ),
         onDismissRequest = onDismiss,
         sheetState = state
     ) {
@@ -311,7 +310,7 @@ fun RequestsBottomSheet(
             is Resource.Error -> {
                 Toast.makeText(
                     context,
-                    resource.messageResource?.let { context.getString(it) }?:"",
+                    resource.messageResource?.let { context.getString(it) } ?: "",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -325,6 +324,7 @@ fun RequestsBottomSheet(
                     )
                 }
             }
+
             else -> {}
         }
     }
@@ -333,7 +333,7 @@ fun RequestsBottomSheet(
             is Resource.Error -> {
                 Toast.makeText(
                     context,
-                    resource.messageResource?.let { context.getString(it) }?:"",
+                    resource.messageResource?.let { context.getString(it) } ?: "",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -349,7 +349,9 @@ fun RequestsBottomSheet(
     }
 
     ModalBottomSheet(
-        modifier = Modifier.padding(top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()),
+        modifier = Modifier.padding(
+            top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+        ),
         sheetState = state,
         onDismissRequest = {
             onDismiss()
@@ -438,7 +440,10 @@ fun RequestsBottomSheet(
                                 )
                             }
                         ) {
-                            Text(text = stringResource(R.string.see_more), style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = stringResource(R.string.see_more),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
@@ -449,7 +454,6 @@ fun RequestsBottomSheet(
 
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun JoiningRequestRow(
     request: RequestForCommunity,
@@ -467,35 +471,16 @@ private fun JoiningRequestRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(50.dp)) {
                 if (request.profilePictureUrl != null) {
-                    GlideImage(
-                        imageModel = { request.profilePictureUrl.toUri() },
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(request.profilePictureUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentScale = ContentScale.Crop,
+                        contentDescription = request.userName,
                         modifier = Modifier
                             .matchParentSize()
-                            .clip(CircleShape),
-                        requestBuilder = {
-                            val thumbnailRequest = Glide
-                                .with(context)
-                                .asBitmap()
-                                .load(request.profilePictureUrl.toUri())
-                                .apply(RequestOptions().override(100))
-
-                            Glide
-                                .with(context)
-                                .asBitmap()
-                                .apply(
-                                    RequestOptions()
-                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                )
-                                .thumbnail(thumbnailRequest)
-                                .transition(withCrossFade())
-                        },
-                        loading = {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .align(Alignment.Center)
-                            )
-                        }
+                            .clip(CircleShape)
                     )
                 } else {
                     Image(
@@ -536,7 +521,10 @@ private fun JoiningRequestRow(
                 shape = RoundedCornerShape(10.dp),
                 contentPadding = PaddingValues(horizontal = 2.dp),
             ) {
-                Text(stringResource(R.string.member), modifier = Modifier.padding(horizontal = 2.dp))
+                Text(
+                    stringResource(R.string.member),
+                    modifier = Modifier.padding(horizontal = 2.dp)
+                )
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -562,14 +550,15 @@ private fun JoiningRequestRow(
                         imageVector = Icons.Outlined.CheckCircleOutline,
                         contentDescription = null
                     )
-                    Text(text = stringResource(R.string.accept), modifier = Modifier.padding(horizontal = 2.dp))
+                    Text(
+                        text = stringResource(R.string.accept),
+                        modifier = Modifier.padding(horizontal = 2.dp)
+                    )
                 }
             }
         }
     }
 }
-
-
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -605,7 +594,7 @@ fun MembersBottomSheet(
                 isProcessing = false
                 Toast.makeText(
                     context,
-                    resource.messageResource?.let { context.getString(it) }?:"",
+                    resource.messageResource?.let { context.getString(it) } ?: "",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -631,7 +620,7 @@ fun MembersBottomSheet(
                 isProcessing = false
                 Toast.makeText(
                     context,
-                    resource.messageResource?.let { context.getString(it) }?:"",
+                    resource.messageResource?.let { context.getString(it) } ?: "",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -657,7 +646,7 @@ fun MembersBottomSheet(
                 isProcessing = false
                 Toast.makeText(
                     context,
-                    resource.messageResource?.let { context.getString(it) }?:"",
+                    resource.messageResource?.let { context.getString(it) } ?: "",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -682,7 +671,7 @@ fun MembersBottomSheet(
                 isProcessing = false
                 Toast.makeText(
                     context,
-                    resource.messageResource?.let { context.getString(it) }?:"",
+                    resource.messageResource?.let { context.getString(it) } ?: "",
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -701,7 +690,9 @@ fun MembersBottomSheet(
     }
 
     ModalBottomSheet(
-        modifier = Modifier.padding(top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()),
+        modifier = Modifier.padding(
+            top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+        ),
         onDismissRequest = onDismiss,
         sheetState = state
     ) {
@@ -739,7 +730,7 @@ fun MembersBottomSheet(
                     onDeleteUser = { onDeleteUser(it.uid) },
                     onAddModeratorUser = { onAddModeratorUser(it.uid) },
                     onRemoveModeratorUser = { onRemoveModeratorUser(it.uid) },
-                    onMakeAdminUser = {onMakeAdminUser(it.uid)}
+                    onMakeAdminUser = { onMakeAdminUser(it.uid) }
                 )
             }
             item {
@@ -763,7 +754,10 @@ fun MembersBottomSheet(
                                 )
                             }
                         ) {
-                            Text(text = stringResource(R.string.see_more), style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = stringResource(R.string.see_more),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
                 }
@@ -774,7 +768,6 @@ fun MembersBottomSheet(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun MemberRow(
     member: Member,
@@ -794,36 +787,16 @@ private fun MemberRow(
         Row {
             Box(modifier = Modifier.size(50.dp)) {
                 if (member.profileImageUrl != null) {
-                    GlideImage(
-                        imageModel = { member.profileImageUrl.toUri() },
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(member.profileImageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = member.userName,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .matchParentSize()
-                            .clip(CircleShape),
-                        requestBuilder = {
-                            val context = LocalContext.current
-                            val thumbnailRequest = Glide
-                                .with(context)
-                                .asBitmap()
-                                .load(member.profileImageUrl.toUri())
-                                .apply(RequestOptions().override(100))
-
-                            Glide
-                                .with(context)
-                                .asBitmap()
-                                .apply(
-                                    RequestOptions()
-                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                )
-                                .thumbnail(thumbnailRequest)
-                                .transition(withCrossFade())
-                        },
-                        loading = {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .align(Alignment.Center)
-                            )
-                        }
+                            .clip(CircleShape)
                     )
                 } else {
                     Image(
@@ -844,7 +817,7 @@ private fun MemberRow(
                 horizontalAlignment = Alignment.Start
             ) {
                 Text(
-                    text = member.userName?:"",
+                    text = member.userName ?: "",
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
@@ -964,7 +937,11 @@ fun UpdateCommunityNameOrDescriptionBottomSheet(
         when (val resource = viewModel.updateCommunityFieldState.value) {
             is Resource.Error -> {
                 isLoading = false
-                Toast.makeText(context, resource.messageResource?.let { context.getString(it) }?:"", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    resource.messageResource?.let { context.getString(it) } ?: "",
+                    Toast.LENGTH_SHORT
+                ).show()
                 viewModel.updateCommunityFieldState.value = Resource.Idle()
             }
 
@@ -984,6 +961,9 @@ fun UpdateCommunityNameOrDescriptionBottomSheet(
     }
 
     ModalBottomSheet(
+        modifier = Modifier.padding(
+            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        ),
         onDismissRequest = onDismiss,
         sheetState = state
     ) {
@@ -1079,8 +1059,8 @@ fun UpdateCommunityNameOrDescriptionBottomSheet(
 @Preview
 @Composable
 private fun MembersBottomSheetPreview() {
-Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize()) {
 
-}
+    }
 
 }

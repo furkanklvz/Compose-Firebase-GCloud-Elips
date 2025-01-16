@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,11 +37,9 @@ import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -80,10 +77,8 @@ import com.klavs.bindle.data.entity.DetailedEvent
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.User
 import com.klavs.bindle.resource.Resource
-import com.klavs.bindle.ui.theme.Green1
-import com.klavs.bindle.ui.theme.Green2
 import com.klavs.bindle.ui.theme.LightRed
-import com.klavs.bindle.uix.view.GlideImageLoader
+import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.viewmodel.EventBottomSheetViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import java.text.SimpleDateFormat
@@ -91,7 +86,7 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventBottomSheet(
     onDismiss: () -> Unit,
@@ -100,7 +95,7 @@ fun EventBottomSheet(
     onCommunityClick: (String) -> Unit,
     viewModel: EventBottomSheetViewModel = hiltViewModel(),
     navHostViewModel: NavHostViewModel,
-    showTicketDialog: () -> Unit,
+    showTicketSheet: () -> Unit,
     onLogInClick: () -> Unit,
     currentUser: FirebaseUser?,
     navigateToEventPage: (String) -> Unit,
@@ -160,7 +155,8 @@ fun EventBottomSheet(
             viewModel.sendRequest(
                 eventId = it,
                 myUid = currentUser!!.uid,
-                newTickets = userResourceFlow.data!!.tickets - 2
+                newTickets = userResourceFlow.data!!.tickets - 2,
+                username = currentUser.displayName?:""
             )
         },
         isLoading = isLoading,
@@ -175,14 +171,15 @@ fun EventBottomSheet(
         onCommunityClick = { onCommunityClick(it) },
         isEmailVerified = currentUser?.isEmailVerified,
         showUnverifiedAccountAlertDialog = showUnverifiedAccountAlertDialog,
-        showTicketDialog = showTicketDialog,
+        showTicketDialog = showTicketSheet,
         linkedCommunitiesResource = linkedCommunitiesResource,
         participateTheEvent = {
             viewModel.participateTheEvent(
-                detailedEvent!!.event.id ?: "",
+                detailedEvent!!.event.id,
                 detailedEvent!!.event.ownerUid,
                 myUid = currentUser!!.uid,
-                newTickets = userResourceFlow.data!!.tickets - 2
+                newTickets = userResourceFlow.data!!.tickets - 2,
+                username = currentUser.displayName?:""
             )
         },
         navigateToEventPage = { navigateToEventPage(event.id) },
@@ -455,7 +452,7 @@ fun EventInfos(
                                     modifier = Modifier.align(Alignment.CenterHorizontally),
                                     shape = RoundedCornerShape(15.dp),
                                     onClick = {
-                                        showConfirmRequestDialog(detailedEvent.event.id!!)
+                                        showConfirmRequestDialog(detailedEvent.event.id)
                                     }
                                 ) {
                                     Text(stringResource(R.string.send_request_to_participate))
@@ -652,7 +649,7 @@ fun EventInfos(
                                 .clip(CircleShape)
                         ) {
                             if (detailedEvent.owner.profilePictureUrl != null) {
-                                GlideImageLoader(
+                                CoilImageLoader(
                                     detailedEvent.owner.profilePictureUrl,
                                     LocalContext.current,
                                     Modifier.matchParentSize()
@@ -776,10 +773,10 @@ private fun LinkedCommunityList(
         Column {
             linkedCommunityList.forEach { community ->
                 ListItem(
-                    modifier = Modifier.clickable { onCommunityClick(community.id!!) },
+                    modifier = Modifier.clickable { onCommunityClick(community.id) },
                     trailingContent = {
                         IconButton(
-                            onClick = { onCommunityClick(community.id!!) }
+                            onClick = { onCommunityClick(community.id) }
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
@@ -795,7 +792,7 @@ private fun LinkedCommunityList(
                                 .clip(CircleShape)
                         ) {
                             if (community.communityPictureUrl != null) {
-                                GlideImageLoader(
+                                CoilImageLoader(
                                     community.communityPictureUrl,
                                     LocalContext.current,
                                     Modifier.matchParentSize()
@@ -824,7 +821,7 @@ private fun LinkedCommunityList(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 private fun EventBottomSheetPreview() {

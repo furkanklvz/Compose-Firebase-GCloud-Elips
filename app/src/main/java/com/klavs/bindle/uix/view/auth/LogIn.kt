@@ -1,6 +1,7 @@
 package com.klavs.bindle.uix.view.auth
 
 import android.credentials.GetCredentialException
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -47,7 +49,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -59,12 +60,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.credentials.Credential
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.firebase.auth.AuthResult
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
 import com.klavs.bindle.resource.Resource
@@ -72,7 +70,6 @@ import com.klavs.bindle.ui.theme.logoFont
 import com.klavs.bindle.uix.viewmodel.LogInViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LogIn(navController: NavHostController, viewModel: LogInViewModel) {
     val context = LocalContext.current
@@ -304,7 +301,7 @@ private fun LoginContent(
                             painter = painterResource(id = R.drawable.logo_no_background),
                             contentDescription = "near me",
                             modifier = Modifier
-                                .size(50.dp),
+                                .size(IconButtonDefaults.mediumContainerSize()),
                             contentScale = ContentScale.FillHeight
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -517,6 +514,8 @@ fun SignInWithGoogleButton(text: String,onError :() ->Unit, onGetCredentialRespo
                 } catch (e: Exception) {
                     if (e.message == GetCredentialException.TYPE_NO_CREDENTIAL) {
                         onError()
+                    }else{
+                        Log.e("auth error", e.toString())
                     }
                 }
             }

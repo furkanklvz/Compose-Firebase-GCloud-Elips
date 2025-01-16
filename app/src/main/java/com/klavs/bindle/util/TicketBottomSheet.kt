@@ -2,36 +2,17 @@ package com.klavs.bindle.util
 
 import android.app.Activity
 import android.util.Log
-import android.view.Window
-import android.view.WindowManager
-import android.widget.Button
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.windowInsetsTopHeight
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -39,19 +20,16 @@ import androidx.compose.material.icons.outlined.LocalActivity
 import androidx.compose.material.icons.outlined.SlowMotionVideo
 import androidx.compose.material.icons.rounded.AddLocation
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.LocalActivity
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonElevation
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -59,19 +37,17 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedSecureTextField
-import androidx.compose.material3.Surface
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -82,22 +58,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.klavs.bindle.R
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.resource.RewardedAdResource
-import com.klavs.bindle.ui.theme.defaultTextFont
 import com.klavs.bindle.uix.viewmodel.TicketDialogViewModel
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TicketDialog(
+fun TicketBottomSheet(
     onDismiss: () -> Unit,
+    sheetState: SheetState,
     uid: String,
-    tickets: Long,
-    paddingValues: PaddingValues
+    tickets: Long
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -128,28 +102,6 @@ fun TicketDialog(
             when (rewardedAd) {
                 is Resource.Error -> {
                     viewModel.loadRewardedAd(context)
-                    /*AlertDialog(
-                    onDismissRequest = { isRewardButtonClicked = false },
-                    confirmButton = {
-                        Button(
-                            onClick = { isRewardButtonClicked = false }
-                        ) {
-                            Text(stringResource(R.string.okay))
-                        }
-                    },
-                    title = { Text(stringResource(R.string.error)) },
-                    text = {
-                        Text(
-                            stringResource(R.string.ad_could_not_be_loaded)
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.ErrorOutline,
-                            contentDescription = "error"
-                        )
-                    }
-                )*/
                 }
 
                 is Resource.Idle -> {
@@ -186,12 +138,12 @@ fun TicketDialog(
         }
     }
 
-    TicketDialogScreen(
+    TicketBottomSheet(
         onDismiss = {
             viewModel.reset()
             onDismiss()
         },
-        paddingValues = paddingValues,
+        sheetState = sheetState,
         rewardResource = rewardResource,
         resetRewardResource = { viewModel.resetRewardResource() },
         rewardedAdContentStateResource = rewardedAdContentStateResource,
@@ -246,10 +198,11 @@ fun TicketDialog(
 }
 
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
-private fun TicketDialogScreen(
+private fun TicketBottomSheet(
     onDismiss: () -> Unit,
+    sheetState: SheetState,
     rewardResource: Resource<Pair<Int, Int>>,
     productsResource: Resource<List<Pair<String?, String>>>,
     resetRewardResource: () -> Unit,
@@ -257,192 +210,181 @@ private fun TicketDialogScreen(
     rewardedAdContentStateResource: RewardedAdResource?,
     isLoading: Boolean,
     tickets: Long,
-    paddingValues: PaddingValues = PaddingValues(0.dp),
     reward: () -> Unit,
     purchase: (String) -> Unit,
     onAdsClick: () -> Unit,
     rewardButtonClicked: Boolean,
 ) {
-    Dialog(
+    ModalBottomSheet(
+        modifier = Modifier.fillMaxSize(),
+        sheetState = sheetState,
         onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
+        shape = RectangleShape,
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                color = Color.Transparent
+            )
+        },
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.8f),
-            shape = RoundedCornerShape(30.dp)
-        ) {
-            /*val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-            DisposableEffect(Unit) {
-                window?.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-                onDispose { }
-            }*/
-            Box(Modifier.fillMaxSize()) {
-                when (rewardResource) {
-                    is Resource.Error -> {
-                        AlertDialog(
-                            onDismissRequest = resetRewardResource,
-                            confirmButton = {
-                                Button(
-                                    onClick = resetRewardResource
-                                ) {
-                                    Text(stringResource(R.string.okay))
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.ErrorOutline,
-                                    contentDescription = "on error"
-                                )
-                            },
-                            title = {
-                                Text(stringResource(R.string.reward_could_not_be_received_dialog_title))
-                            },
-                            text = {
-                                Text(stringResource(R.string.reward_could_not_be_received_dialog_text))
-                            })
-                    }
-
-                    is Resource.Idle -> {}
-                    is Resource.Loading -> {
-                        Dialog(
-                            onDismissRequest = {},
-                            properties = DialogProperties(
-                                dismissOnBackPress = false,
-                                dismissOnClickOutside = false
-                            )
-                        ) {
-                            CircularWavyProgressIndicator()
-                        }
-                    }
-
-                    is Resource.Success -> {
-                        AlertDialog(
-                            onDismissRequest = resetRewardResource,
-                            confirmButton = {
-                                Button(
-                                    onClick = resetRewardResource
-                                ) {
-                                    Text(stringResource(R.string.great))
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.LocalActivity,
-                                    contentDescription = "success"
-                                )
-                            },
-                            title = {
-                                Text(stringResource(R.string.congrats))
-                            },
-                            text = {
-                                Text(
-                                    stringResource(
-                                        R.string.you_won_x_y,
-                                        rewardResource.data!!.first,
-                                        stringResource(rewardResource.data.second)
-                                    )
-                                )
+        Box(Modifier.fillMaxSize()) {
+            when (rewardResource) {
+                is Resource.Error -> {
+                    AlertDialog(
+                        onDismissRequest = resetRewardResource,
+                        confirmButton = {
+                            Button(
+                                onClick = resetRewardResource
+                            ) {
+                                Text(stringResource(R.string.okay))
                             }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.ErrorOutline,
+                                contentDescription = "on error"
+                            )
+                        },
+                        title = {
+                            Text(stringResource(R.string.reward_could_not_be_received_dialog_title))
+                        },
+                        text = {
+                            Text(stringResource(R.string.reward_could_not_be_received_dialog_text))
+                        })
+                }
+
+                is Resource.Idle -> {}
+                is Resource.Loading -> {
+                    Dialog(
+                        onDismissRequest = {},
+                        properties = DialogProperties(
+                            dismissOnBackPress = false,
+                            dismissOnClickOutside = false
                         )
+                    ) {
+                        CircularWavyProgressIndicator()
                     }
                 }
-                when (rewardedAdContentStateResource) {
-                    is RewardedAdResource.OnUserEarnedReward -> {
-                        reward()
-                    }
 
-                    is RewardedAdResource.onAdClicked -> {}
-                    is RewardedAdResource.onAdDismissedFullScreenContent -> {}
-
-                    is RewardedAdResource.onAdFailedToShowFullScreenContent -> {
-                        AlertDialog(
-                            onDismissRequest = resetRewardedAdContentStateResource,
-                            confirmButton = {
-                                Button(
-                                    onClick = resetRewardedAdContentStateResource
-                                ) {
-                                    Text(stringResource(R.string.okay))
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.ErrorOutline,
-                                    contentDescription = "on failed"
-                                )
-                            },
-                            title = {
-                                Text(stringResource(R.string.ad_could_not_be_loaded))
-                            },
-                            text = {
-                                Text(stringResource(R.string.failed_to_show_ad_dialog_text))
-                            })
-                    }
-
-                    is RewardedAdResource.onAdImpression -> {}
-                    is RewardedAdResource.onAdShowedFullScreenContent -> {}
-                    null -> {}
-                }
-
-                if (rewardButtonClicked) {
-                    if (isLoading) {
-                        Dialog(
-                            onDismissRequest = {},
-                            properties = DialogProperties(
-                                dismissOnBackPress = false,
-                                dismissOnClickOutside = false
+                is Resource.Success -> {
+                    AlertDialog(
+                        onDismissRequest = resetRewardResource,
+                        confirmButton = {
+                            Button(
+                                onClick = resetRewardResource
+                            ) {
+                                Text(stringResource(R.string.great))
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.LocalActivity,
+                                contentDescription = "success"
                             )
-                        ) {
-                            CircularWavyProgressIndicator()
-                        }
-                    }
-                }
-                when (productsResource) {
-                    is Resource.Error -> {
-                        Box(Modifier.fillMaxSize()) {
+                        },
+                        title = {
+                            Text(stringResource(R.string.congrats))
+                        },
+                        text = {
                             Text(
-                                productsResource.messageResource?.let { stringResource(it) } ?: "",
-                                modifier = Modifier
-                                    .padding(6.dp)
-                                    .align(Alignment.Center)
+                                stringResource(
+                                    R.string.you_won_x_y,
+                                    rewardResource.data!!.first,
+                                    stringResource(rewardResource.data.second)
+                                )
                             )
                         }
-                    }
+                    )
+                }
+            }
+            when (rewardedAdContentStateResource) {
+                is RewardedAdResource.OnUserEarnedReward -> {
+                    reward()
+                }
 
-                    is Resource.Idle -> {}
-                    is Resource.Loading -> {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .zIndex(2f)
-                        ) {
-                            CircularWavyProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                        }
-                    }
+                is RewardedAdResource.onAdClicked -> {}
+                is RewardedAdResource.onAdDismissedFullScreenContent -> {}
 
-                    is Resource.Success -> {
-                        if (productsResource.data != null) {
-                            Log.e("ticketdialog", "success")
-                            Content(
-                                products = productsResource.data,
-                                tickets = tickets,
-                                onAdsClick = onAdsClick,
-                                onProductClick = { productName ->
-                                    purchase(productName)
-                                },
-                                onDismissDialog = onDismiss,
-                                paddingValues = paddingValues
+                is RewardedAdResource.onAdFailedToShowFullScreenContent -> {
+                    AlertDialog(
+                        onDismissRequest = resetRewardedAdContentStateResource,
+                        confirmButton = {
+                            Button(
+                                onClick = resetRewardedAdContentStateResource
+                            ) {
+                                Text(stringResource(R.string.okay))
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.ErrorOutline,
+                                contentDescription = "on failed"
                             )
+                        },
+                        title = {
+                            Text(stringResource(R.string.ad_could_not_be_loaded))
+                        },
+                        text = {
+                            Text(stringResource(R.string.failed_to_show_ad_dialog_text))
+                        })
+                }
 
-                        }
+                is RewardedAdResource.onAdImpression -> {}
+                is RewardedAdResource.onAdShowedFullScreenContent -> {}
+                null -> {}
+            }
+
+            if (rewardButtonClicked) {
+                if (isLoading) {
+                    Dialog(
+                        onDismissRequest = {},
+                        properties = DialogProperties(
+                            dismissOnBackPress = false,
+                            dismissOnClickOutside = false
+                        )
+                    ) {
+                        CircularWavyProgressIndicator()
                     }
                 }
             }
+            when (productsResource) {
+                is Resource.Error -> {
+                    Box(Modifier.fillMaxSize()) {
+                        Text(
+                            productsResource.messageResource?.let { stringResource(it) } ?: "",
+                            modifier = Modifier
+                                .padding(6.dp)
+                                .align(Alignment.Center)
+                        )
+                    }
+                }
 
+                is Resource.Idle -> {}
+                is Resource.Loading -> {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .zIndex(2f)
+                    ) {
+                        CircularWavyProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
+                }
 
+                is Resource.Success -> {
+                    if (productsResource.data != null) {
+                        Log.e("ticketdialog", "success")
+                        Content(
+                            products = productsResource.data,
+                            tickets = tickets,
+                            onAdsClick = onAdsClick,
+                            onProductClick = { productName ->
+                                purchase(productName)
+                            },
+                            onDismissDialog = onDismiss
+                        )
+
+                    }
+                }
+            }
         }
     }
 }
@@ -452,7 +394,6 @@ private fun TicketDialogScreen(
 private fun Content(
     products: List<Pair<String?, String>>,
     tickets: Long,
-    paddingValues: PaddingValues,
     onAdsClick: () -> Unit,
     onProductClick: (String) -> Unit,
     onDismissDialog: () -> Unit
@@ -461,13 +402,13 @@ private fun Content(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.SpaceAround
     ) {
         Box(Modifier.fillMaxWidth()) {
             IconButton(
                 modifier = Modifier
-                    .padding(7.dp)
-                    .align(Alignment.TopStart),
+                    .align(Alignment.TopEnd)
+                    .size(IconButtonDefaults.mediumContainerSize()),
                 onClick = onDismissDialog
             ) {
                 Icon(
@@ -483,7 +424,8 @@ private fun Content(
                     Icons.Rounded.LocalActivity,
                     contentDescription = "tickets",
                     modifier = Modifier
-                        .padding(5.dp),
+                        .padding(5.dp)
+                        .size(IconButtonDefaults.xLargeIconSize),
                     tint = MaterialTheme.colorScheme.tertiary
                 )
                 Text(
@@ -538,13 +480,12 @@ private fun Content(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 products.forEachIndexed { index, productDetails ->
-                    /*val price =
-                        productDetails.oneTimePurchaseOfferDetails?.formattedPrice ?: "N/A"*/
                     val price =
                         productDetails.first ?: "N/A"
 
 
                     ListItem(
+                        tonalElevation = 5.dp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .fillMaxWidth(0.9f)
@@ -678,14 +619,16 @@ private fun Content(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(
     showSystemUi = true, showBackground = true,
 )
 @Composable
 private fun TicketDialogPreview() {
     Box(Modifier.fillMaxSize()) {
-        TicketDialogScreen(
+        TicketBottomSheet(
             onDismiss = {},
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             rewardResource = Resource.Idle(/*data = 1 to R.string.ticket*/),
             productsResource = Resource.Success(
                 data = listOf(

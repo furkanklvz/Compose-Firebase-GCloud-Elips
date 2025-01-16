@@ -91,7 +91,6 @@ import com.google.firebase.Timestamp
 import com.klavs.bindle.R
 import com.klavs.bindle.util.TimeFunctions
 import com.klavs.bindle.data.entity.Event
-import com.klavs.bindle.data.entity.community.Community
 import com.klavs.bindle.data.entity.sealedclasses.EventType
 import com.klavs.bindle.data.entity.sealedclasses.HidingDataOptions
 import com.klavs.bindle.data.entity.sealedclasses.ParticipationOptionsForEvent
@@ -99,7 +98,7 @@ import com.klavs.bindle.data.entity.community.JoinedCommunity
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.LightRed
-import com.klavs.bindle.uix.view.GlideImageLoader
+import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.view.communities.getRoleNameFromRolePriority
 import com.klavs.bindle.uix.viewmodel.MapViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
@@ -690,7 +689,7 @@ private fun CommunityRow(
                     .clip(CircleShape)
             ) {
                 if (community.communityPictureUrl != null) {
-                    GlideImageLoader(
+                    CoilImageLoader(
                         url = community.communityPictureUrl,
                         context = context,
                         modifier = Modifier.matchParentSize()

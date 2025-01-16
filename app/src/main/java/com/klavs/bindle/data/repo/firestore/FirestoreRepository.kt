@@ -50,8 +50,8 @@ interface FirestoreRepository {
     suspend fun refundTicket(uid:String, amount: Long): Resource<String>
     suspend fun searchDocumentByFieldNameStartWith(query: Query, field: String, startWith: String): Resource<QuerySnapshot>
     suspend fun getEventsNearMe(latLng: LatLng): Resource<List<Event>>
-    suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long)
-    suspend fun sendJoinRequestForCommunity(communityId: String, myUid: String, newTickets: Long)
+    suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long, username: String)
+    suspend fun sendJoinRequestForCommunity(communityId: String, myUid: String, newTickets: Long, username: String)
     suspend fun rejectRequestForCommunity(communityId: String, uid: String): Resource<String>
     suspend fun rejectRequestForEvent(eventId: String, uid: String): Resource<String>
     suspend fun getSuggestedCommunities(limit: Int, lastDoc: DocumentSnapshot?): Resource<Pair<List<Community>,DocumentSnapshot?>>

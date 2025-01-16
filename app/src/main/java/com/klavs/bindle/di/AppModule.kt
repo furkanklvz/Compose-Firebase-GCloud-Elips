@@ -67,7 +67,11 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-class AppModule {
+object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideFirebaseCrashlytics(): FirebaseCrashlytics = FirebaseCrashlytics.getInstance()
 
     @Provides
     @Singleton
@@ -94,46 +98,58 @@ class AppModule {
     fun provideAuthDataSource(
         auth: FirebaseAuth,
         db: FirebaseFirestore,
-        storage: FirebaseStorage
+        storage: FirebaseStorage,
+        crashlytics: FirebaseCrashlytics
     ): AuthDataSource =
         AuthDataSourceImpl(
             auth,
             db,
-            storage
+            storage,
+            crashlytics
         )
 
     @Provides
     @Singleton
-    fun provideFirestoreDataSource(db: FirebaseFirestore, auth: FirebaseAuth): FirestoreDataSource =
-        FirestoreDataSourceImpl(db, auth = auth)
+    fun provideFirestoreDataSource(
+        db: FirebaseFirestore, auth: FirebaseAuth,
+        crashlytics: FirebaseCrashlytics
+    ): FirestoreDataSource =
+        FirestoreDataSourceImpl(db, auth = auth, crashlytics)
 
     @Provides
     @Singleton
-    fun provideStorageDataSource(storage: FirebaseStorage, context: Context): StorageDatasource =
-        StorageDatasourceImpl(storage, context = context)
+    fun provideStorageDataSource(
+        storage: FirebaseStorage, context: Context,
+        crashlytics: FirebaseCrashlytics
+    ): StorageDatasource =
+        StorageDatasourceImpl(storage, context = context, crashlytics)
 
     @Provides
     @Singleton
     fun provideMessagingDataSource(
         db: FirebaseFirestore,
         messaging: FirebaseMessaging,
-        context: Context
+        context: Context,
+        crashlytics: FirebaseCrashlytics
     ): MessagingDataSource =
         MessagingDataSourceImpl(
             context = context,
             messaging = messaging,
-            db = db
+            db = db,
+            crashlytics
         )
 
     @Provides
     @Singleton
     fun provideAlgoliaDataSource(
         @EventsIndex indexEvents: Index,
-        @CommunitiesIndex indexCommunities: Index
+        @CommunitiesIndex indexCommunities: Index,
+        crashlytics: FirebaseCrashlytics
     ): AlgoliaDataSource =
         AlgoliaDataSourceImpl(
             indexCommunities = indexCommunities,
-            indexEvents = indexEvents
+            indexEvents = indexEvents,
+            crashlytics = crashlytics
         )
 
     @Provides
@@ -142,13 +158,14 @@ class AppModule {
         billingClient: BillingClient,
         context: Context,
         db: FirebaseFirestore,
-        firestoreRepo: FirestoreRepository
+        firestoreRepo: FirestoreRepository,
+        crashlytics: FirebaseCrashlytics
     ): GooglePlayBillingDataSource =
         GooglePlayBillingDataSourceImpl(
             billingClient = billingClient,
             context = context,
             firestoreRepo = firestoreRepo,
-            db = db
+            db = db, crashlytics
         )
 
     @Provides
@@ -204,8 +221,9 @@ class AppModule {
     @Singleton
     fun provideLocationDataSource(
         context: Context,
-        locationClient: FusedLocationProviderClient
-    ): LocationDataSource = LocationDataSourceImpl(locationClient, context)
+        locationClient: FusedLocationProviderClient,
+        crashlytics: FirebaseCrashlytics
+    ): LocationDataSource = LocationDataSourceImpl(locationClient, context, crashlytics)
 
     @Provides
     @Singleton
@@ -214,7 +232,7 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun provideAlgoliaClient(context: Context): ClientSearch {
+    fun provideAlgoliaClient(context: Context, crashlytics: FirebaseCrashlytics): ClientSearch {
         return try {
             ClientSearch(
                 ApplicationID(context.getString(R.string.algolia_application_id)),
@@ -222,7 +240,7 @@ class AppModule {
             )
         } catch (e: Exception) {
             Log.e("error from datasource", "Failed to initialize Algolia client: ${e.message}")
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             throw e
         }
     }
@@ -261,8 +279,10 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun providePurchasesUpdatedListener(): PurchasesUpdatedListenerImpl {
-        return PurchasesUpdatedListenerImpl()
+    fun providePurchasesUpdatedListener(
+        crashlytics: FirebaseCrashlytics
+    ): PurchasesUpdatedListenerImpl {
+        return PurchasesUpdatedListenerImpl(crashlytics)
     }
 
     @Provides

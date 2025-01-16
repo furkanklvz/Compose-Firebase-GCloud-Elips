@@ -169,14 +169,15 @@ class FirestoreRepositoryImpl @Inject constructor(val ds: FirestoreDataSource) :
             latLng = latLng
         )}
 
-    override suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long) =
-        withContext(Dispatchers.IO){ds.joinTheCommunity(communityId, myUid, newTickets)}
+    override suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long, username: String) =
+        withContext(Dispatchers.IO){ds.joinTheCommunity(communityId, myUid, newTickets, username)}
 
     override suspend fun sendJoinRequestForCommunity(
         communityId: String,
         myUid: String,
-        newTickets: Long
-    ) = withContext(Dispatchers.IO){ds.sendJoinRequestForCommunity(communityId, myUid, newTickets)}
+        newTickets: Long,
+        username: String
+    ) = withContext(Dispatchers.IO){ds.sendJoinRequestForCommunity(communityId, myUid, newTickets, username)}
 
     override suspend fun rejectRequestForCommunity(communityId: String, uid: String): Resource<String>
     = withContext(Dispatchers.IO){ds.rejectRequestForCommunity(communityId, uid)}

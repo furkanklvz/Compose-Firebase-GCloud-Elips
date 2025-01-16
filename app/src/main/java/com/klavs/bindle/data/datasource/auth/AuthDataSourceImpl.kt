@@ -7,7 +7,6 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthEmailException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
@@ -31,7 +30,8 @@ import javax.inject.Inject
 class AuthDataSourceImpl @Inject constructor(
     private val auth: FirebaseAuth,
     private val db: FirebaseFirestore,
-    private val storage: FirebaseStorage
+    private val storage: FirebaseStorage,
+    private val crashlytics: FirebaseCrashlytics
 ) : AuthDataSource {
     override suspend fun loginUser(email: String, password: String): Resource<AuthResult> {
         return try {
@@ -42,7 +42,7 @@ class AuthDataSourceImpl @Inject constructor(
             if (e is FirebaseAuthInvalidCredentialsException) {
                 Resource.Error(R.string.signed_in_user_not_found)
             } else {
-                FirebaseCrashlytics.getInstance().recordException(e)
+                crashlytics.recordException(e)
                 Resource.Error(R.string.something_went_wrong_try_again_later)
             }
         }
@@ -59,7 +59,7 @@ class AuthDataSourceImpl @Inject constructor(
             if (e is FirebaseAuthUserCollisionException) {
                 Resource.Error(R.string.email_already_exists)
             } else {
-                FirebaseCrashlytics.getInstance().recordException(e)
+                crashlytics.recordException(e)
                 Resource.Error(R.string.something_went_wrong_check_the_information_you_entered)
             }
         }
@@ -71,7 +71,7 @@ class AuthDataSourceImpl @Inject constructor(
             val result = auth.signInWithCredential(firebaseCredential).await()
             Resource.Success(data = result)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.cannot_signed_in)
         }
     }
@@ -117,7 +117,7 @@ class AuthDataSourceImpl @Inject constructor(
 
 
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
     }
@@ -135,7 +135,7 @@ class AuthDataSourceImpl @Inject constructor(
                 Resource.Success(data = false)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
     }
@@ -147,7 +147,7 @@ class AuthDataSourceImpl @Inject constructor(
             userRef.update("fcmToken", null).await()
             auth.signOut()
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "unknown error")
         }
     }
@@ -157,7 +157,7 @@ class AuthDataSourceImpl @Inject constructor(
             auth.sendPasswordResetEmail(email).await()
             Resource.Success(true)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.email_cannot_be_sent)
         }
     }
@@ -167,7 +167,7 @@ class AuthDataSourceImpl @Inject constructor(
             auth.currentUser?.sendEmailVerification()?.await()
             Resource.Success(true)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.email_cannot_be_sent)
         }
     }
@@ -193,7 +193,7 @@ class AuthDataSourceImpl @Inject constructor(
                 return Resource.Error(messageResource = R.string.wrong_password_please_check_it)
             } else {
                 Log.e("error from datasource", e.toString())
-                FirebaseCrashlytics.getInstance().recordException(e)
+                crashlytics.recordException(e)
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         }
@@ -212,7 +212,7 @@ class AuthDataSourceImpl @Inject constructor(
                 return Resource.Error(messageResource = R.string.wrong_password_please_check_it)
             } else {
                 Log.e("error from datasource", e.toString())
-                FirebaseCrashlytics.getInstance().recordException(e)
+                crashlytics.recordException(e)
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         }
@@ -231,7 +231,7 @@ class AuthDataSourceImpl @Inject constructor(
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -257,7 +257,7 @@ class AuthDataSourceImpl @Inject constructor(
             user.delete().await()
             val photoRef = storage.reference.child("profilePictures/$uid")
             photoRef.delete().await()
-            FirebaseCrashlytics.getInstance().log("An account has been deleted: $uid")
+            crashlytics.log("An account has been deleted: $uid")
             Resource.Success(data = Unit)
         } catch (e: Exception) {
             if (e is StorageException && e.errorCode == StorageException.ERROR_OBJECT_NOT_FOUND) {
@@ -270,7 +270,7 @@ class AuthDataSourceImpl @Inject constructor(
                 Log.e("error from datasource", e.toString())
                 Resource.Error(messageResource = R.string.wrong_password)
             } else {
-                FirebaseCrashlytics.getInstance().recordException(e)
+                crashlytics.recordException(e)
                 Log.e("error from datasource", e.message ?: "unknown error")
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }

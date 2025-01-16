@@ -15,7 +15,6 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Query.Direction
 import com.google.firebase.firestore.QuerySnapshot
@@ -37,7 +36,8 @@ import javax.inject.Inject
 
 class FirestoreDataSourceImpl @Inject constructor(
     private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val crashlytics: FirebaseCrashlytics
 ) :
     FirestoreDataSource {
     override suspend fun checkUniqueUsername(username: String, myUid: String?): Resource<Boolean> {
@@ -51,7 +51,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                     .await()
             if (result.isEmpty) Resource.Success(true) else Resource.Success(false)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
     }
@@ -63,7 +63,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                     .await()
             if (result.isEmpty) Resource.Success(true) else Resource.Success(false)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
     }
@@ -83,7 +83,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             auth.currentUser!!.reload().await()
             Resource.Success(true)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
     }
@@ -103,7 +103,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                 Resource.Error(R.string.something_went_wrong)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
     }
@@ -120,7 +120,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                         if (user != null) {
                             trySend(Resource.Success(data = user))
                         } else {
-                            FirebaseCrashlytics.getInstance()
+                            crashlytics
                                 .recordException(Exception("User data is null"))
                             Log.e("error from datasource", "User data is null")
                             trySend(Resource.Error(messageResource = R.string.something_went_wrong))
@@ -130,7 +130,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                         trySend(Resource.Error(messageResource = R.string.user_does_not_exist))
                     }
                 } else {
-                    FirebaseCrashlytics.getInstance()
+                    crashlytics
                         .recordException(Exception("User data is null"))
                     Log.e("error from datasource", "User data is null")
                     trySend(Resource.Error(messageResource = R.string.something_went_wrong))
@@ -150,7 +150,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                 if (userSnapshot != null) {
                     Resource.Success(data = userObject!!)
                 } else {
-                    FirebaseCrashlytics.getInstance()
+                    crashlytics
                         .recordException(Exception("User data is null"))
                     Resource.Error(messageResource = R.string.something_went_wrong)
                 }
@@ -159,7 +159,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("error from datasource", e.message ?: "")
-            FirebaseCrashlytics.getInstance()
+            crashlytics
                 .recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }
@@ -180,7 +180,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             }
             Resource.Success(data = true)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "")
             Resource.Error(R.string.something_went_wrong)
         }
@@ -201,7 +201,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                 Resource.Success(data = doc.id)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -215,7 +215,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             val document = docRef.get(source).await()
             Resource.Success(data = document)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -227,7 +227,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             val snapshot = query.get(source).await()
             Resource.Success(data = snapshot)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -242,7 +242,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             documentRef.update(fieldName, FieldValue.arrayUnion(data)).await()
             Resource.Success(data = true)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -255,7 +255,7 @@ class FirestoreDataSourceImpl @Inject constructor(
         val listener = collectionRef.whereEqualTo(fieldName, value).limit(1)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
-                    FirebaseCrashlytics.getInstance().recordException(e)
+                    crashlytics.recordException(e)
                     trySend(Resource.Error(messageResource = R.string.something_went_wrong)).isSuccess
                 } else {
                     if (snapshot != null && !snapshot.isEmpty) {
@@ -278,7 +278,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             val snapshot = query.count().get(AggregateSource.SERVER).await()
             emit(Resource.Success(data = snapshot.count.toInt()))
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             emit(Resource.Error(messageResource = R.string.something_went_wrong))
         }
     }
@@ -306,7 +306,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -342,7 +342,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             documentRef.delete().await()
             Resource.Success(data = documentRef.id)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -368,7 +368,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             batch.commit().await()
             Resource.Success(data = uid)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -394,7 +394,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             batch.commit().await()
             Resource.Success(data = uid)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -406,7 +406,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             memberRef.delete().await()
             Resource.Success(data = uid)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -418,7 +418,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             memberRef.update("rolePriority", 1).await()
             Resource.Success(data = uid)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -430,7 +430,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             memberRef.update("rolePriority", 2).await()
             Resource.Success(data = uid)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -444,7 +444,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             documentRef.update(fieldName, data ?: FieldValue.delete()).await()
             Resource.Success(data = data)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -455,7 +455,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             val result = postRef.collection("likes").whereEqualTo("uid", uid).get().await()
             !result.isEmpty
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             false
         }
     }
@@ -465,7 +465,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             val snapshot = query.count().get(AggregateSource.SERVER).await()
             snapshot.count.toInt()
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             null
         }
     }
@@ -488,7 +488,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             batch.commit().await()
             Resource.Success(data = event.copy(id = eventDoc.id))
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -510,7 +510,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -532,7 +532,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                 Resource.Success(data = eventList)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", "${e.message}")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -548,15 +548,15 @@ class FirestoreDataSourceImpl @Inject constructor(
                     userRef.update("tickets", userTickets + amount).await()
                     Resource.Success(data = uid)
                 } else {
-                    FirebaseCrashlytics.getInstance().log("user tickets not exist: $uid")
+                    crashlytics.log("user tickets not exist: $uid")
                     Resource.Error(messageResource = R.string.something_went_wrong)
                 }
             } else {
-                FirebaseCrashlytics.getInstance().log("user not exist: $uid")
+                crashlytics.log("user not exist: $uid")
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
     }
@@ -572,7 +572,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             val snapshot = ref.get().await()
             Resource.Success(snapshot)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "unknown error")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -628,7 +628,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             }
             Resource.Success(data = events)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "unknown error")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -645,7 +645,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             batch.delete(eventParticipantRef)
             batch.commit().await()
         }catch (e:Exception){
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.toString())
         }
     }
@@ -659,18 +659,24 @@ class FirestoreDataSourceImpl @Inject constructor(
             batch.delete(memberRef)
             batch.commit().await()
         }catch (e:Exception){
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
         }
 
     }
 
-    override suspend fun joinTheCommunity(communityId: String, myUid: String, newTickets: Long) {
+    override suspend fun joinTheCommunity(
+        communityId: String,
+        myUid: String,
+        newTickets: Long,
+        username: String
+    ) {
         try {
             val memberRef =
                 db.collection("communities").document(communityId).collection("members").document(myUid)
             val memberData = Member(
                 uid = myUid,
-                rolePriority = CommunityRoles.Member.rolePriority
+                rolePriority = CommunityRoles.Member.rolePriority,
+                userName = username
             )
             val batch = db.batch()
             batch.set(memberRef, memberData)
@@ -678,7 +684,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             batch.update(userRef, "tickets", newTickets)
             batch.commit().await()
         }catch (e:Exception){
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.toString())
         }
     }
@@ -686,13 +692,15 @@ class FirestoreDataSourceImpl @Inject constructor(
     override suspend fun sendJoinRequestForCommunity(
         communityId: String,
         myUid: String,
-        newTickets: Long
+        newTickets: Long,
+        username: String
     ) {
         try {
             val batch = db.batch()
             val requestData = RequestForCommunity(
                 uid = myUid,
                 requestDate = Timestamp.now(),
+                userName = username
             )
             val requestRef =
                 db.collection("communities").document(communityId).collection("joiningRequests").document(myUid)
@@ -701,7 +709,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             batch.update(userRef, "tickets", newTickets)
             batch.commit().await()
         }catch (e:Exception){
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.toString())
         }
     }
@@ -722,15 +730,15 @@ class FirestoreDataSourceImpl @Inject constructor(
                     batch.commit().await()
                     Resource.Success(data = uid)
                 } else {
-                    FirebaseCrashlytics.getInstance().log("user tickets not exist: $uid")
+                    crashlytics.log("user tickets not exist: $uid")
                     Resource.Error(messageResource = R.string.something_went_wrong)
                 }
             } else {
-                FirebaseCrashlytics.getInstance().log("user not exist: $uid")
+                crashlytics.log("user not exist: $uid")
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         }catch (e:Exception){
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.toString())
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -751,15 +759,15 @@ class FirestoreDataSourceImpl @Inject constructor(
                     batch.commit().await()
                     Resource.Success(data = uid)
                 } else {
-                    FirebaseCrashlytics.getInstance().log("user tickets not exist: $uid")
+                    crashlytics.log("user tickets not exist: $uid")
                     Resource.Error(messageResource = R.string.something_went_wrong)
                 }
             } else {
-                FirebaseCrashlytics.getInstance().log("user not exist: $uid")
+                crashlytics.log("user not exist: $uid")
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         }catch (e:Exception){
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.toString())
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -787,7 +795,7 @@ class FirestoreDataSourceImpl @Inject constructor(
                 }
             Resource.Success(data = communities to querySnapshot.lastOrNull())
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "unknown error")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -803,7 +811,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             documentRef.update(fieldName, FieldValue.arrayUnion(data)).await()
             Resource.Success(data = true)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "unknown error")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -815,7 +823,7 @@ class FirestoreDataSourceImpl @Inject constructor(
             val listener = query
                 .addSnapshotListener { querySnapshot, error ->
                     if (error != null) {
-                        FirebaseCrashlytics.getInstance().recordException(error)
+                        crashlytics.recordException(error)
                         Log.e("error from datasource", error.message ?: "unknown error")
                         trySend(Resource.Error(messageResource = R.string.something_went_wrong))
                     } else {
@@ -833,7 +841,7 @@ class FirestoreDataSourceImpl @Inject constructor(
         callbackFlow {
             val listener = docRef.addSnapshotListener { docSnapshot, error ->
                 if (error != null) {
-                    FirebaseCrashlytics.getInstance().recordException(error)
+                    crashlytics.recordException(error)
                     Log.e("error from datasource", error.message ?: "unknown error")
                     trySend(Resource.Error(messageResource = R.string.something_went_wrong))
                 } else {

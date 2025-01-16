@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -84,10 +85,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.navigation.NavHostController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade
-import com.bumptech.glide.request.RequestOptions
+import coil3.compose.AsyncImage
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.klavs.bindle.R
@@ -100,8 +101,6 @@ import com.klavs.bindle.data.entity.PostComment
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
 import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
-import com.skydoves.landscapist.ImageOptions
-import com.skydoves.landscapist.glide.GlideImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -677,27 +676,17 @@ private fun PostRow(
                                     .background(Color.LightGray, CircleShape)
                             )
                         } else {
-                            GlideImage(imageModel = { post.userPhotoUrl.toUri() },
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(post.userPhotoUrl)
+                                    .crossfade(true)
+                                    .build(),
                                 modifier = Modifier
                                     .matchParentSize()
                                     .clip(CircleShape),
-                                requestBuilder = {
-                                    val thumbnailRequest = Glide
-                                        .with(context)
-                                        .asBitmap()
-                                        .load(post.userPhotoUrl)
-                                        .apply(RequestOptions().override(100))
-
-                                    Glide
-                                        .with(context)
-                                        .asBitmap()
-                                        .apply(
-                                            RequestOptions()
-                                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                        )
-                                        .thumbnail(thumbnailRequest)
-                                        .transition(withCrossFade())
-                                })
+                                contentScale = ContentScale.Crop,
+                                contentDescription = post.userName
+                            )
                         }
                     }
                     Spacer(Modifier.width(10.dp))
@@ -780,37 +769,20 @@ private fun PostRow(
                 Box(
                     modifier = Modifier
                         .width(screenWidth * 0.95f)
-                        .height(screenWidth * 0.95f * 1.33f)
+                        .heightIn(max = screenWidth * 0.95f * 1.33f, min = 100.dp)
                         .clip(RoundedCornerShape(5.dp))
                         .align(Alignment.CenterHorizontally)
                 ) {
-                    GlideImage(imageModel = { post.imageUrl.toUri() },
-                        modifier = Modifier.matchParentSize(),
-                        imageOptions = ImageOptions(contentScale = ContentScale.Crop),
-                        requestBuilder = {
-                            val thumbnailRequest = Glide
-                                .with(context)
-                                .asBitmap()
-                                .load(post.imageUrl.toUri())
-                                .apply(RequestOptions().override(100))
-
-                            Glide
-                                .with(context)
-                                .asBitmap()
-                                .apply(
-                                    RequestOptions()
-                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                )
-                                .thumbnail(thumbnailRequest)
-                                .transition(withCrossFade())
-                        },
-                        failure = {
-                            Text(
-                                stringResource(R.string.image_cannot_be_loaded),
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
-                        }
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(post.imageUrl.toUri())
+                            .crossfade(true)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .placeholderMemoryCacheKey(post.imageUrl.toUri().toString())
+                            .build(),
+                        contentDescription = "post",
+                        modifier = Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.Fit
                     )
                 }
             }
@@ -1157,38 +1129,17 @@ private fun CommentTextField(
         leadingIcon = {
             Box(modifier = Modifier.size(TextFieldDefaults.MinHeight * 0.7f)) {
                 if (currentUser.photoUrl != null) {
-                    GlideImage(imageModel = { currentUser.photoUrl },
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(currentUser.photoUrl)
+                            .crossfade(true)
+                            .build(),
                         modifier = Modifier
                             .matchParentSize()
                             .clip(CircleShape),
-                        requestBuilder = {
-                            val thumbnailRequest = Glide
-                                .with(context)
-                                .asBitmap()
-                                .load(currentUser.photoUrl)
-                                .apply(RequestOptions().override(100))
-
-                            Glide
-                                .with(context)
-                                .asBitmap()
-                                .apply(
-                                    RequestOptions()
-                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                )
-                                .thumbnail(thumbnailRequest)
-                                .transition(withCrossFade())
-                        },
-                        failure = {
-                            Image(
-                                imageVector = Icons.Rounded.Person,
-                                contentDescription = "you",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .clip(CircleShape)
-                                    .background(Color.LightGray, CircleShape)
-                            )
-                        })
+                        contentScale = ContentScale.Crop,
+                        contentDescription = currentUser.displayName
+                    )
                 } else {
                     Image(
                         imageVector = Icons.Rounded.Person,
@@ -1318,28 +1269,17 @@ fun CommentRow(
                     .clip(CircleShape)
             ) {
                 if (comment.senderProfileImageUrl != null) {
-                    GlideImage(imageModel = { comment.senderProfileImageUrl.toUri() },
-                        imageOptions = ImageOptions(contentScale = ContentScale.Crop),
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(comment.senderProfileImageUrl)
+                            .crossfade(true)
+                            .build(),
                         modifier = Modifier
                             .matchParentSize()
                             .clip(CircleShape),
-                        requestBuilder = {
-                            val thumbnailRequest = Glide
-                                .with(context)
-                                .asBitmap()
-                                .load(comment.senderProfileImageUrl.toUri())
-                                .apply(RequestOptions().override(100))
-
-                            Glide
-                                .with(context)
-                                .asBitmap()
-                                .apply(
-                                    RequestOptions()
-                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                )
-                                .thumbnail(thumbnailRequest)
-                                .transition(withCrossFade())
-                        })
+                        contentScale = ContentScale.Crop,
+                        contentDescription = comment.senderUserName
+                    )
                 } else {
                     Image(
                         imageVector = Icons.Rounded.Person,

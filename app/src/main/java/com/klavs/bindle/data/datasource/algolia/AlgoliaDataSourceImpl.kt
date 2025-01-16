@@ -1,9 +1,7 @@
 package com.klavs.bindle.data.datasource.algolia
 
 import android.util.Log
-import com.algolia.instantsearch.filter.state.filters
 import com.algolia.search.client.Index
-import com.algolia.search.model.filter.NumericOperator
 import com.algolia.search.model.response.ResponseSearch
 import com.algolia.search.model.search.Query
 import com.google.firebase.Timestamp
@@ -16,7 +14,8 @@ import javax.inject.Inject
 
 class AlgoliaDataSourceImpl @Inject constructor(
     @EventsIndex private val indexEvents: Index,
-    @CommunitiesIndex private val indexCommunities: Index
+    @CommunitiesIndex private val indexCommunities: Index,
+    private val crashlytics: FirebaseCrashlytics
 ) : AlgoliaDataSource {
     override suspend fun searchEvent(
         searchQuery: String,
@@ -31,7 +30,7 @@ class AlgoliaDataSourceImpl @Inject constructor(
             val hits = response.hits
             Resource.Success(data = hits)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "unknown error")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -51,7 +50,7 @@ class AlgoliaDataSourceImpl @Inject constructor(
             val hits = response.hits
             Resource.Success(data = hits)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("error from datasource", e.message ?: "unknown error")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }

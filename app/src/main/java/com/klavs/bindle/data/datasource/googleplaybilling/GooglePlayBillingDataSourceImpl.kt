@@ -20,12 +20,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.klavs.bindle.R
 import com.klavs.bindle.data.repo.firestore.FirestoreRepository
 import com.klavs.bindle.resource.Resource
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -34,7 +32,8 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
     private val billingClient: BillingClient,
     private val context: Context,
     private val firestoreRepo: FirestoreRepository,
-    private val db: FirebaseFirestore
+    private val db: FirebaseFirestore,
+    private val crashlytics: FirebaseCrashlytics
 ) :
     GooglePlayBillingDataSource {
 
@@ -55,7 +54,7 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
                             "Billing error",
                             "billing client bağlanamadı: ${billingResult.debugMessage}"
                         )
-                        FirebaseCrashlytics.getInstance()
+                        crashlytics
                             .log("startConnection hatası: ${billingResult.debugMessage}")
                         trySend(Resource.Error(messageResource = R.string.something_went_wrong))
                     }
@@ -66,7 +65,7 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
                         "Billing error",
                         "startConnection hatası: Disconnected"
                     )
-                    FirebaseCrashlytics.getInstance().log("startConnection hatası: Disconnected")
+                    crashlytics.log("startConnection hatası: Disconnected")
                     trySend(Resource.Error(messageResource = R.string.something_went_wrong))
                 }
             })
@@ -103,7 +102,7 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
             )
             Resource.Success(productDetailsResult.productDetailsList!!)
         } else {
-            FirebaseCrashlytics.getInstance()
+            crashlytics
                 .log("Ürün listemele hatası: ${productDetailsResult.billingResult.debugMessage}")
             Log.e(
                 "Billing error",
@@ -132,7 +131,7 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
             Log.e("Billing error", "client başlatıldı")
             Resource.Success(Unit)
         } else {
-            FirebaseCrashlytics.getInstance()
+            crashlytics
                 .log("client başlatma hatası: ${billingResult.debugMessage}")
             Log.e("Billing error", "client başlatma hatası: ${billingResult.debugMessage}")
             Resource.Error(messageResource = R.string.something_went_wrong)
@@ -174,7 +173,7 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashlytics.recordException(e)
             Log.e("Billing error", "satın alındı ama ödüllendirilemedi: ${e.message}")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -186,29 +185,24 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
         purchase: Purchase,
         ticketCount: Long
     ): Resource<Purchase> {
-        val userRef = db.collection("users").document(uid)
-        val dbState = firestoreRepo.updateField(
-            documentRef = userRef,
-            fieldName = "tickets",
-            data = ticketCount
-        )
-        val purchaseObject = com.klavs.bindle.data.entity.Purchase(
-            orderID = purchase.orderId,
-            timestamp = Timestamp.now(),
-            productId = purchase.products.first(),
-            uid = uid,
-            consumed = false,
-            purchaseToken = purchase.purchaseToken
-        )
-        firestoreRepo.addDocument(
-            documentName = purchase.purchaseToken,
-            collectionRef = userRef.collection("purchases"),
-            data = purchaseObject
-        )
-        return if (dbState is Resource.Success) {
+        return try {
+            val userRef = db.collection("users").document(uid)
+            val purchaseObject = com.klavs.bindle.data.entity.Purchase(
+                orderID = purchase.orderId,
+                timestamp = Timestamp.now(),
+                productId = purchase.products.first(),
+                uid = uid,
+                consumed = false,
+                purchaseToken = purchase.purchaseToken
+            )
+            val purchaseRef = userRef.collection("purchases").document(purchase.purchaseToken)
+            val batch = db.batch()
+            batch.update(userRef, "tickets", ticketCount)
+            batch.set(purchaseRef, purchaseObject)
+            batch.commit().await()
             Log.e("Billing error", "satın alındı ve ödüllendirildi")
             Resource.Success(data = purchase)
-        } else {
+        } catch (e: Exception) {
             Log.e("Billing error", "satın alındı fakat ödüllendirilemedi")
             Resource.Error(messageResource = R.string.something_went_wrong)
         }
@@ -260,7 +254,7 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
                 )
                 Resource.Success(data = purchase)
             } else {
-                FirebaseCrashlytics.getInstance()
+                crashlytics
                     .log("Satın alma tüketme başarısız: ${consumeState.billingResult.debugMessage}")
                 Log.e(
                     "Billing error",
@@ -269,7 +263,7 @@ class GooglePlayBillingDataSourceImpl @Inject constructor(
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance()
+            crashlytics
                 .recordException(e)
             Log.e("Billing error", "Satın alma tüketme başarısız: $e")
             Resource.Error(messageResource = R.string.something_went_wrong)

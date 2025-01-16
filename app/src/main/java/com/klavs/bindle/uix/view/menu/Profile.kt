@@ -96,10 +96,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade
-import com.bumptech.glide.request.RequestOptions
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -113,8 +112,7 @@ import com.klavs.bindle.data.entity.sealedclasses.Gender
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.ProfileViewModel
-import com.klavs.bindle.util.TicketDialog
-import com.skydoves.landscapist.glide.GlideImage
+import com.klavs.bindle.util.TicketBottomSheet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -158,10 +156,11 @@ fun Profile(
     val deletingAccountResource by viewModel.deletingAccountResource.collectAsState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    var showTicketDialog by remember { mutableStateOf(false) }
+    var showTicketSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(currentUser) {
-        if (currentUser != null && !currentUser!!.isEmailVerified){
+        if (currentUser != null && !currentUser!!.isEmailVerified) {
             if (viewModel.sendEmailVerificationState.value is Resource.Success) {
                 scope.launch {
                     snackbarHostState.showSnackbar(
@@ -295,7 +294,7 @@ fun Profile(
                         ),
                         shape = ButtonDefaults.squareShape,
                         onClick = {
-                            showTicketDialog = true
+                            showTicketSheet = true
                         }
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -386,49 +385,49 @@ fun Profile(
                                 )
 
                             } else {
-                                    FilledTonalIconButton(
-                                        modifier = Modifier.size(IconButtonDefaults.xSmallContainerSize()),
-                                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                        ),
-                                        onClick = {
-                                            if (viewModel.sendEmailVerificationState.value is Resource.Success) {
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar(
-                                                        context.getString(
-                                                            R.string.please_check_your_email
-                                                        )
+                                FilledTonalIconButton(
+                                    modifier = Modifier.size(IconButtonDefaults.xSmallContainerSize()),
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    ),
+                                    onClick = {
+                                        if (viewModel.sendEmailVerificationState.value is Resource.Success) {
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    context.getString(
+                                                        R.string.please_check_your_email
                                                     )
-                                                }
-                                            } else {
-                                                scope.launch {
-                                                    val result = snackbarHostState.showSnackbar(
-                                                        context.getString(R.string.unverified_account),
-                                                        actionLabel = context.getString(R.string.verify_with_email),
-                                                        duration = SnackbarDuration.Long,
-                                                        withDismissAction = true
-                                                    )
-                                                    when (result) {
-                                                        SnackbarResult.Dismissed -> {
-                                                            snackbarHostState.currentSnackbarData?.dismiss()
-                                                        }
+                                                )
+                                            }
+                                        } else {
+                                            scope.launch {
+                                                val result = snackbarHostState.showSnackbar(
+                                                    context.getString(R.string.unverified_account),
+                                                    actionLabel = context.getString(R.string.verify_with_email),
+                                                    duration = SnackbarDuration.Long,
+                                                    withDismissAction = true
+                                                )
+                                                when (result) {
+                                                    SnackbarResult.Dismissed -> {
+                                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                                    }
 
-                                                        SnackbarResult.ActionPerformed -> {
-                                                            viewModel.sendEmailVerification()
-                                                            snackbarHostState.currentSnackbarData?.dismiss()
-                                                        }
+                                                    SnackbarResult.ActionPerformed -> {
+                                                        viewModel.sendEmailVerification()
+                                                        snackbarHostState.currentSnackbarData?.dismiss()
                                                     }
                                                 }
                                             }
                                         }
-                                    ) {
-                                        Icon(
-                                            modifier = Modifier.size(IconButtonDefaults.xSmallIconSize),
-                                            painter = painterResource(R.drawable.person_alert),
-                                            contentDescription = "verify"
-                                        )
                                     }
+                                ) {
+                                    Icon(
+                                        modifier = Modifier.size(IconButtonDefaults.xSmallIconSize),
+                                        painter = painterResource(R.drawable.person_alert),
+                                        contentDescription = "verify"
+                                    )
+                                }
 
                             }
                         }
@@ -492,12 +491,18 @@ fun Profile(
                                 CircularWavyProgressIndicator(modifier = Modifier.align(Alignment.Center))
                             }
                         }
-                        if (showTicketDialog) {
-                            TicketDialog(
-                                onDismiss = { showTicketDialog = false },
+                        if (showTicketSheet) {
+                            TicketBottomSheet(
+                                onDismiss = {
+                                    scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                                        if (!ticketSheetState.isVisible) {
+                                            showTicketSheet = false
+                                        }
+                                    }
+                                },
                                 uid = currentUser!!.uid,
                                 tickets = user.tickets,
-                                paddingValues = innerPadding
+                                sheetState = ticketSheetState
                             )
                         }
                         Content(
@@ -659,9 +664,9 @@ private fun Content(
                             value = password,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             visualTransformation = PasswordVisualTransformation(),
-                            onValueChange = {password = it},
+                            onValueChange = { password = it },
                             label = {
-                                Text(stringResource(R.string.password)+":")
+                                Text(stringResource(R.string.password) + ":")
                             },
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -779,26 +784,15 @@ private fun Content(
                     }
                 } else {
                     if (profilePictureUri != null) {
-                        GlideImage(
-                            imageModel = { currentUser.photoUrl },
-                            requestBuilder = {
-                                val thumbnailRequest = Glide
-                                    .with(context)
-                                    .asBitmap()
-                                    .load(currentUser.photoUrl)
-                                    .apply(RequestOptions().override(100))
-
-                                Glide
-                                    .with(context)
-                                    .asBitmap()
-                                    .apply(
-                                        RequestOptions()
-                                            .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                    )
-                                    .thumbnail(thumbnailRequest)
-                                    .transition(withCrossFade())
-                            },
-                            modifier = Modifier.matchParentSize()
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(currentUser.photoUrl)
+                                .crossfade(true)
+                                .build(),
+                            modifier = Modifier
+                                .matchParentSize(),
+                            contentScale = ContentScale.Crop,
+                            contentDescription = currentUser.displayName,
                         )
                     } else {
                         Image(
@@ -890,9 +884,9 @@ private fun Content(
                     HorizontalDivider()
                     PhoneNumberRow(
                         value = phoneNumberValue
-                    ) {value->
+                    ) { value ->
                         if (value.length <= 15)
-                        changePhoneNumber(value.filter { it.isDigit() })
+                            changePhoneNumber(value.filter { it.isDigit() })
                     }
                 }
 
@@ -1037,14 +1031,19 @@ private fun BottomSheet(
                                         duration = SnackbarDuration.Long,
                                         actionLabel = context.getString(R.string.permission_settings)
                                     )
-                                    if (SnackbarResult.ActionPerformed == result){
-                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.fromParts("package", context.packageName, null)
-                                        }
+                                    if (SnackbarResult.ActionPerformed == result) {
+                                        val intent =
+                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.fromParts(
+                                                    "package",
+                                                    context.packageName,
+                                                    null
+                                                )
+                                            }
                                         context.startActivity(intent)
                                     }
                                 }
-                            }else {
+                            } else {
                                 permissionState.launchPermissionRequest()
                             }
                         }
@@ -1094,14 +1093,19 @@ private fun BottomSheet(
                                         duration = SnackbarDuration.Long,
                                         actionLabel = context.getString(R.string.permission_settings)
                                     )
-                                    if (SnackbarResult.ActionPerformed == result){
-                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.fromParts("package", context.packageName, null)
-                                        }
+                                    if (SnackbarResult.ActionPerformed == result) {
+                                        val intent =
+                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.fromParts(
+                                                    "package",
+                                                    context.packageName,
+                                                    null
+                                                )
+                                            }
                                         context.startActivity(intent)
                                     }
                                 }
-                            }else {
+                            } else {
                                 permissionState.launchPermissionRequest()
                             }
                         }
@@ -1263,6 +1267,7 @@ private fun AccountInformationRow(
         )
     )
 }
+
 @Composable
 private fun PhoneNumberRow(
     value: String,
@@ -1271,10 +1276,12 @@ private fun PhoneNumberRow(
     onValueChange: (String) -> Unit,
 ) {
     TextField(
-        trailingIcon = {Icon(
-            imageVector = Icons.Rounded.Phone,
-            contentDescription = "user name"
-        )},
+        trailingIcon = {
+            Icon(
+                imageVector = Icons.Rounded.Phone,
+                contentDescription = "user name"
+            )
+        },
         isError = userNameAlreadyUsed || userNameIsEmpty,
         label = { Text(text = stringResource(R.string.phone_number_optional)) },
         value = value,

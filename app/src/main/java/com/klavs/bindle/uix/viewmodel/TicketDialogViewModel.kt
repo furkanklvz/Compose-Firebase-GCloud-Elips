@@ -6,17 +6,14 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.ProductDetails
-import com.android.billingclient.api.Purchase
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.klavs.bindle.R
-import com.klavs.bindle.data.PurchasesUpdatedListenerImpl
 import com.klavs.bindle.data.repo.firestore.FirestoreRepository
 import com.klavs.bindle.data.repo.googleplaybilling.GooglePlayBillingRepository
 import com.klavs.bindle.resource.Resource
@@ -89,8 +86,6 @@ class TicketDialogViewModel @Inject constructor(
             adRequest,
             object : RewardedAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    FirebaseCrashlytics.getInstance()
-                        .log("Rewarded ad failed to load: ${adError.message}")
                     Log.e("RewardedAd", "Rewarded ad failed to load: ${adError.message}")
                     _rewardedAd.value =
                         Resource.Error(messageResource = R.string.ad_cannot_be_loaded)

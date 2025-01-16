@@ -157,13 +157,13 @@ import com.klavs.bindle.data.entity.User
 import com.klavs.bindle.data.entity.sealedclasses.EventType
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
-import com.klavs.bindle.uix.view.GlideImageLoader
+import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.view.event.getEventIconFromValue
 import com.klavs.bindle.uix.viewmodel.MapViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.util.Constants
 import com.klavs.bindle.util.EventBottomSheet
-import com.klavs.bindle.util.TicketDialog
+import com.klavs.bindle.util.TicketBottomSheet
 import com.klavs.bindle.util.UnverifiedAccountAlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -296,7 +296,7 @@ fun Map(
 
     }
 
-    val uiSettings = remember {
+    val uiSettings by remember {
         mutableStateOf(
             MapUiSettings(
                 compassEnabled = false,
@@ -305,18 +305,18 @@ fun Map(
             )
         )
     }
-    val properties = remember {
+    var properties by remember {
         mutableStateOf(
             MapProperties(
                 mapType = MapType.NORMAL,
                 isMyLocationEnabled = locationPermission.status.isGranted,
-                maxZoomPreference = 17.1f
+                maxZoomPreference = 20f
             )
         )
     }
     val theme = viewModel.themeState.collectAsState()
     LaunchedEffect(key1 = theme.value) {
-        properties.value = properties.value.copy(
+        properties = properties.copy(
             mapStyleOptions =
             MapStyleOptions.loadRawResourceStyle(
                 context,
@@ -340,7 +340,7 @@ fun Map(
         if (locationPermission.status.isGranted && cameraPositionState.position.target == DEFAULT_CAMERA_LOCATION) {
             viewModel.getCurrentLocation()
         }
-        properties.value = properties.value.copy(
+        properties = properties.copy(
             isMyLocationEnabled = locationPermission.status.isGranted
         )
     }
@@ -376,8 +376,8 @@ fun Map(
         },
         searchResultResource = searchResultResource,
         cameraPositionState = cameraPositionState,
-        properties = properties.value,
-        uiSettings = uiSettings.value,
+        properties = properties,
+        uiSettings = uiSettings,
         locationPermissionIsGranted = locationPermission.status.isGranted,
         locationPermission = locationPermission,
         navController = navController,
@@ -397,6 +397,7 @@ fun Map(
 }
 
 
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(
     ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class,
     ExperimentalMaterial3ExpressiveApi::class
@@ -429,7 +430,8 @@ private fun MapView(
     val eventList = remember { mutableStateListOf<Event>() }
     var isLoading by remember { mutableStateOf(false) }
     var openFilterDialog by remember { mutableStateOf(false) }
-    var showTicketDialog by remember { mutableStateOf(false) }
+    var showTicketSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var onlyPublicEvents by remember { mutableStateOf(false) }
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
     val selectedCategories = remember { mutableStateListOf<EventType>() }
@@ -508,7 +510,7 @@ private fun MapView(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState, modifier = Modifier.imePadding())
         }
-    ) { innerPadding ->
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -520,20 +522,26 @@ private fun MapView(
                     navController.navigate("menu_profile")
                 }
             }
-            if (showTicketDialog) {
+            if (showTicketSheet) {
                 if (currentUser != null) {
                     if (userResource is Resource.Success && userResource.data != null) {
-                        TicketDialog(
-                            onDismiss = { showTicketDialog = false },
+                        TicketBottomSheet(
+                            onDismiss = {
+                                scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                                    if (!ticketSheetState.isVisible) {
+                                        showTicketSheet = false
+                                    }
+                                }
+                            },
                             uid = userResource.data!!.uid,
                             tickets = userResource.data!!.tickets,
-                            paddingValues = innerPadding
+                            sheetState = ticketSheetState
                         )
                     } else {
-                        showTicketDialog = false
+                        showTicketSheet = false
                     }
                 } else {
-                    showTicketDialog = false
+                    showTicketSheet = false
                 }
             }
             if (openFilterDialog) {
@@ -603,7 +611,7 @@ private fun MapView(
                         searchResultResource = searchResultResource,
                         changeSearchBarExpanded = { searchBarExpanded = it },
                         userResource = userResource,
-                        showTicketDialog = { showTicketDialog = true },
+                        showTicketDialog = { showTicketSheet = true },
                         openFilterDialog = { openFilterDialog = true },
                         selectedCategories = selectedCategories,
                         startDate = startDate,
@@ -733,7 +741,11 @@ private fun MapView(
             if (showEventBottomSheet != null) {
                 EventBottomSheet(
                     onDismiss = {
-                        showEventBottomSheet = null
+                        scope.launch { eventBottomSheetState.hide() }.invokeOnCompletion {
+                            if (!eventBottomSheetState.isVisible){
+                                showEventBottomSheet = null
+                            }
+                        }
                     },
                     sheetState = eventBottomSheetState,
                     context = LocalContext.current,
@@ -741,7 +753,7 @@ private fun MapView(
                     currentUser = currentUser,
                     event = showEventBottomSheet!!,
                     navHostViewModel = navHostViewModel,
-                    showTicketDialog = { showTicketDialog = true },
+                    showTicketSheet = { showTicketSheet = true },
                     showUnverifiedAccountAlertDialog = {
                         showUnverifiedAccountAlertDialog = true
                     },
@@ -818,7 +830,7 @@ private fun MapView(
                 onClick = {
                     if (userResource is Resource.Success && userResource.data != null) {
                         if (userResource.data!!.tickets < 3) {
-                            showTicketDialog = true
+                            showTicketSheet = true
                         } else {
                             val latitude = cameraPositionState.position.target.latitude.toString()
                             val longitude = cameraPositionState.position.target.longitude.toString()
@@ -1365,7 +1377,7 @@ private fun SearchBarContent(
                                 }
                         ) {
                             if (userResource is Resource.Success && userResource.data!!.profilePictureUrl != null) {
-                                GlideImageLoader(
+                                CoilImageLoader(
                                     userResource.data.profilePictureUrl!!,
                                     context,
                                     Modifier.matchParentSize()

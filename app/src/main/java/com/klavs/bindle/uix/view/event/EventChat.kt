@@ -83,7 +83,7 @@ import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.message.Message
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
-import com.klavs.bindle.uix.view.GlideImageLoader
+import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.viewmodel.event.EventChatViewModel
 import com.klavs.bindle.util.Constants
 import kotlinx.coroutines.launch
@@ -686,14 +686,14 @@ private fun EventChatContent(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .focusRequester(focusRequester),
-                                                shape = CircleShape,
+                                                shape = RoundedCornerShape(20.dp),
                                                 colors = TextFieldDefaults.colors(
                                                     focusedIndicatorColor = Color.Transparent,
                                                     unfocusedIndicatorColor = Color.Transparent,
                                                     disabledIndicatorColor = Color.Transparent
                                                 ),
                                                 value = messageText,
-                                                maxLines = 2,
+                                                maxLines = 4,
                                                 onValueChange = { messageText = it }
                                             )
                                             IconButton(
@@ -834,7 +834,7 @@ fun MessageRow(
                             .clip(CircleShape)
                     ) {
                         if (message.senderPhotoUrl != null) {
-                            GlideImageLoader(
+                            CoilImageLoader(
                                 message.senderPhotoUrl,
                                 context = context,
                                 Modifier.matchParentSize()

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -91,6 +90,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -102,12 +102,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.core.net.toUri
 import androidx.navigation.NavHostController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions.withCrossFade
-import com.bumptech.glide.request.RequestOptions
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -129,9 +127,8 @@ import com.klavs.bindle.util.EventBottomSheet
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
 import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
-import com.klavs.bindle.util.TicketDialog
+import com.klavs.bindle.util.TicketBottomSheet
 import com.klavs.bindle.util.UnverifiedAccountAlertDialog
-import com.skydoves.landscapist.glide.GlideImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -168,7 +165,7 @@ fun CommunityPage(
 
     LaunchedEffect(myMemberDocResource) {
         if (myMemberDocResource is Resource.Success) {
-            if (upcomingEventsResource is Resource.Idle || upcomingEventsResource is Resource.Error){
+            if (upcomingEventsResource is Resource.Idle || upcomingEventsResource is Resource.Error) {
                 viewModel.getUpcomingEvents(communityId)
             }
         }
@@ -337,7 +334,8 @@ private fun Content(
     val settingsBottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
-    var showTicketDialog by remember { mutableStateOf(false) }
+    var showTicketSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var commentsForPost by remember { mutableStateOf<String?>(null) }
     val commentsBottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
@@ -905,20 +903,24 @@ private fun Content(
                     onDismissRequest = { showDeleteCommunityDialog = false }
                 )
             }
-            if (showTicketDialog) {
+            if (showTicketSheet) {
                 if (userResourceFlow is Resource.Success) {
                     if (currentUser != null) {
-                        TicketDialog(
-                            onDismiss = { showTicketDialog = false },
+                        TicketBottomSheet(
+                            onDismiss = { scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                                if (!ticketSheetState.isVisible){
+                                    showTicketSheet = false
+                                }
+                            } },
                             uid = currentUser.uid,
                             tickets = userResourceFlow.data!!.tickets,
-                            paddingValues = innerPadding
+                            sheetState = ticketSheetState
                         )
                     } else {
-                        showTicketDialog = false
+                        showTicketSheet = false
                     }
                 } else {
-                    showTicketDialog = false
+                    showTicketSheet = false
                 }
             }
             if (showUnverifiedAccountAlertDialog) {
@@ -1018,15 +1020,21 @@ private fun Content(
                 if (currentUser != null) {
                     EventBottomSheet(
                         onDismiss = {
-                            showEventBottomSheet = null
+                            scope.launch {
+                                eventBottomSheetState.hide()
+                            }.invokeOnCompletion {
+                                if (!eventBottomSheetState.isVisible) {
+                                    showEventBottomSheet = null
+                                }
+                            }
                         },
                         sheetState = eventBottomSheetState,
                         context = LocalContext.current,
-                        onCommunityClick = { navController.navigate("community_page/$it")},
+                        onCommunityClick = { navController.navigate("community_page/$it") },
                         currentUser = currentUser,
                         event = showEventBottomSheet!!,
                         navHostViewModel = navHostViewModel,
-                        showTicketDialog = { showTicketDialog = true },
+                        showTicketSheet = { showTicketSheet = true },
                         showUnverifiedAccountAlertDialog = {
                             showUnverifiedAccountAlertDialog = true
                         },
@@ -1057,8 +1065,14 @@ private fun Content(
                         )
                     },
                     onDismiss = {
-                        updateNameOrDescriptionBottomSheetValue = null
-                        viewModel.updateCommunityFieldState.value = Resource.Idle()
+                        scope.launch {
+                            updateNameOrDescriptionBottomSheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!updateNameOrDescriptionBottomSheetState.isVisible) {
+                                updateNameOrDescriptionBottomSheetValue = null
+                                viewModel.updateCommunityFieldState.value = Resource.Idle()
+                            }
+                        }
                     },
                     viewModel = viewModel
                 )
@@ -1070,7 +1084,15 @@ private fun Content(
                         communityId = community.id,
                         postId = commentsForPost!!,
                         rolePriority = rolePriority,
-                        onDismiss = { commentsForPost = null },
+                        onDismiss = {
+                            scope.launch {
+                                commentsBottomSheetState.hide()
+                            }.invokeOnCompletion {
+                                if (!commentsBottomSheetState.isVisible) {
+                                    commentsForPost = null
+                                }
+                            }
+                        },
                         vmPost = vmPost,
                         currentUser = currentUser,
                         reportUserDialog = { reportUserDialog = it }
@@ -1086,13 +1108,13 @@ private fun Content(
                         scope.launch { requestsBottomSheetState.hide() }.invokeOnCompletion {
                             if (!requestsBottomSheetState.isVisible) {
                                 showRequestsBottomSheet = false
+                                viewModel.lastRequest = null
+                                viewModel.rejectRequestState.value = Resource.Idle()
+                                viewModel.acceptRequestState.value = Resource.Idle()
+                                viewModel.getNumberOfRequests(community.id)
+                                viewModel.getNumOfMembers(community.id)
                             }
                         }
-                        viewModel.lastRequest = null
-                        viewModel.rejectRequestState.value = Resource.Idle()
-                        viewModel.acceptRequestState.value = Resource.Idle()
-                        viewModel.getNumberOfRequests(community.id)
-                        viewModel.getNumOfMembers(community.id)
                     },
                     viewModel = viewModel
                 )
@@ -1125,8 +1147,12 @@ private fun Content(
                         )
                     },
                     onDismiss = {
-                        showSettingsBottomSheet = false
-                        viewModel.updateCommunityFieldState.value = Resource.Idle()
+                        scope.launch { settingsBottomSheetState.hide() }.invokeOnCompletion {
+                            if (!settingsBottomSheetState.isVisible) {
+                                showSettingsBottomSheet = false
+                                viewModel.updateCommunityFieldState.value = Resource.Idle()
+                            }
+                        }
                     },
                     viewModel = viewModel
                 )
@@ -1168,10 +1194,11 @@ private fun Content(
                                     viewModel.sendJoinRequest(
                                         communityId = community.id,
                                         myUid = currentUser.uid,
-                                        newTickets = userResourceFlow.data.tickets - 2
+                                        newTickets = userResourceFlow.data.tickets - 2,
+                                        username = currentUser.displayName ?: ""
                                     )
                                 } else {
-                                    showTicketDialog = true
+                                    showTicketSheet = true
                                 }
                             } else {
                                 scope.launch {
@@ -1207,10 +1234,11 @@ private fun Content(
                                     viewModel.joinTheCommunity(
                                         communityId = community.id,
                                         myUid = currentUser.uid,
-                                        newTickets = userResourceFlow.data.tickets - 2
+                                        newTickets = userResourceFlow.data.tickets - 2,
+                                        username = currentUser.displayName ?: ""
                                     )
                                 } else {
-                                    showTicketDialog = true
+                                    showTicketSheet = true
                                 }
                             } else {
                                 scope.launch {
@@ -1351,43 +1379,16 @@ fun CommunityHeadLine(
                 )
             }
             if (community.communityPictureUrl != null) {
-                GlideImage(
-                    imageModel = { community.communityPictureUrl.toUri() },
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(community.communityPictureUrl)
+                        .crossfade(true)
+                        .build(),
                     modifier = Modifier
                         .matchParentSize()
                         .clip(CircleShape),
-                    requestBuilder = {
-                        val thumbnailRequest = Glide
-                            .with(context)
-                            .asBitmap()
-                            .load(community.communityPictureUrl.toUri())
-                            .apply(RequestOptions().override(100))
-
-                        Glide
-                            .with(context)
-                            .asBitmap()
-                            .apply(
-                                RequestOptions()
-                                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                            )
-                            .thumbnail(thumbnailRequest)
-                            .transition(withCrossFade())
-                    },
-                    loading = {
-                        CircularWavyProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth(0.5f)
-                                .fillMaxHeight(0.5f)
-                                .align(Alignment.Center)
-                        )
-                    },
-                    failure = {
-                        CircularWavyProgressIndicator(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .align(Alignment.Center)
-                        )
-                    },
+                    contentScale = ContentScale.Crop,
+                    contentDescription = community.name
                 )
             } else {
                 Image(
@@ -1427,14 +1428,19 @@ fun CommunityHeadLine(
                                             duration = SnackbarDuration.Long,
                                             actionLabel = context.getString(R.string.permission_settings)
                                         )
-                                        if (SnackbarResult.ActionPerformed == result){
-                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.fromParts("package", context.packageName, null)
-                                            }
+                                        if (SnackbarResult.ActionPerformed == result) {
+                                            val intent =
+                                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                    data = Uri.fromParts(
+                                                        "package",
+                                                        context.packageName,
+                                                        null
+                                                    )
+                                                }
                                             context.startActivity(intent)
                                         }
                                     }
-                                }else {
+                                } else {
                                     permissionState.launchPermissionRequest()
                                 }
                             }
@@ -1477,14 +1483,19 @@ fun CommunityHeadLine(
                                             duration = SnackbarDuration.Long,
                                             actionLabel = context.getString(R.string.permission_settings)
                                         )
-                                        if (SnackbarResult.ActionPerformed == result){
-                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.fromParts("package", context.packageName, null)
-                                            }
+                                        if (SnackbarResult.ActionPerformed == result) {
+                                            val intent =
+                                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                    data = Uri.fromParts(
+                                                        "package",
+                                                        context.packageName,
+                                                        null
+                                                    )
+                                                }
                                             context.startActivity(intent)
                                         }
                                     }
-                                }else {
+                                } else {
                                     permissionState.launchPermissionRequest()
                                 }
                             }

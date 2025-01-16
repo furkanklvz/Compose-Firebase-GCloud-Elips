@@ -78,7 +78,7 @@ import com.klavs.bindle.util.EventBottomSheet
 import com.klavs.bindle.uix.viewmodel.communities.CommunityEventListViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
-import com.klavs.bindle.util.TicketDialog
+import com.klavs.bindle.util.TicketBottomSheet
 import com.klavs.bindle.util.UnverifiedAccountAlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -105,7 +105,6 @@ fun ActiveEventsListPage(
     val unlinkEventResource by eventListViewModel.unlinkEventResource.collectAsState()
     val pastEvents = remember { mutableStateListOf<Event>() }
     val pastEventsResource by eventListViewModel.pastEvents.collectAsState()
-    var showEventBottomSheet by remember { mutableStateOf<Event?>(null) }
     LaunchedEffect(pastEventsResource) {
         if (pastEventsResource is Resource.Success && pastEventsResource.data != null) {
             pastEvents.addAll(pastEventsResource.data!!)
@@ -141,9 +140,7 @@ fun ActiveEventsListPage(
         currentUser = currentUser,
         goToCommunityPage = { navController.navigate("community_page/$it") },
         navHostViewModel = navHostViewModel,
-        navigateToEventPage = { navController.navigate("event_page/${showEventBottomSheet!!.id}") },
-        showEventBottomSheet = showEventBottomSheet,
-        changeEventBottomSheet = { showEventBottomSheet = it },
+        navigateToEventPage = { navController.navigate("event_page/$it") },
         navigateToLogIn = { navController.navigate("log_in") },
         pastEventsResource = pastEventsResource,
         upcomingEventsResoure = upcomingEventsResource,
@@ -167,7 +164,7 @@ fun ActiveEventsListPage(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CommunityEventListContent(
     onBackClick: () -> Unit,
@@ -175,8 +172,6 @@ private fun CommunityEventListContent(
     scope: CoroutineScope,
     snackbarHostState: SnackbarHostState,
     communityName: String,
-    showEventBottomSheet: Event?,
-    changeEventBottomSheet: (Event?) -> Unit,
     unlinkEvent: (String) -> Unit,
     navigateToEventPage: (String) -> Unit,
     navigateToLogIn: () -> Unit,
@@ -194,8 +189,10 @@ private fun CommunityEventListContent(
     goToProfile: () -> Unit
 ) {
     val context = LocalContext.current
-    var showTicketDialog by remember { mutableStateOf(false) }
+    var showTicketSheet by remember { mutableStateOf(false) }
+    val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
+    var showEventBottomSheet by remember { mutableStateOf<Event?>(null) }
     val eventBottomSheetState = rememberModalBottomSheetState()
 
     Scaffold(
@@ -236,14 +233,18 @@ private fun CommunityEventListContent(
                     goToProfile()
                 }
             }
-            if (showTicketDialog) {
+            if (showTicketSheet) {
                 if (userResourceFlow is Resource.Success) {
                     if (currentUser != null) {
-                        TicketDialog(
-                            onDismiss = { showTicketDialog = false },
+                        TicketBottomSheet(
+                            onDismiss = { scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                                if (!ticketSheetState.isVisible){
+                                    showTicketSheet = false
+                                }
+                            } },
                             uid = currentUser.uid,
                             tickets = userResourceFlow.data!!.tickets,
-                            paddingValues = innerPadding
+                            sheetState = ticketSheetState
                         )
                     }
                 }
@@ -252,14 +253,20 @@ private fun CommunityEventListContent(
             if (showEventBottomSheet != null) {
                 if (navHostViewModel != null) {
                     EventBottomSheet(
-                        onDismiss = { changeEventBottomSheet(null) },
+                        onDismiss = {
+                            scope.launch { eventBottomSheetState.hide() }.invokeOnCompletion {
+                                if (!eventBottomSheetState.isVisible){
+                                    showEventBottomSheet = null
+                                }
+                            }
+                        },
                         sheetState = eventBottomSheetState,
                         context = LocalContext.current,
                         onCommunityClick = { goToCommunityPage(it) },
                         currentUser = currentUser,
-                        event = showEventBottomSheet,
+                        event = showEventBottomSheet!!,
                         navHostViewModel = navHostViewModel,
-                        showTicketDialog = { showTicketDialog = true },
+                        showTicketSheet = { showTicketSheet = true },
                         showUnverifiedAccountAlertDialog = {
                             showUnverifiedAccountAlertDialog = true
                         },
@@ -335,7 +342,7 @@ private fun CommunityEventListContent(
                     0 -> {
                         UpcomingEventList(
                             onEventClick = {
-                                changeEventBottomSheet(it)
+                                showEventBottomSheet = it
                             },
                             myRole = myRole,
                             onUnlinkClick = {
@@ -373,7 +380,7 @@ private fun CommunityEventListContent(
                     1 -> {
                         PastEventList(
                             onEventClick = {
-                                changeEventBottomSheet(it)
+                                showEventBottomSheet = it
                             },
                             pastEvents = pastEvents,
                             pastEventsResource = pastEventsResource,
@@ -713,8 +720,6 @@ private fun ActiveEventsListPagePreview() {
         scope = rememberCoroutineScope(),
         snackbarHostState = remember { SnackbarHostState() },
         communityName = "community name",
-        showEventBottomSheet = null,
-        changeEventBottomSheet = {},
         unlinkEvent = {},
         navigateToEventPage = {},
         navigateToLogIn = {},
