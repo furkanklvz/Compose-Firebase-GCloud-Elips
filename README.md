@@ -16,6 +16,7 @@
 <img src="https://github.com/user-attachments/assets/f2569ff1-d8c8-48ab-ae26-ef859b6d41eb" width="100"/>
 <img src="https://github.com/user-attachments/assets/b980340f-2e50-4381-abd5-a9c0acec0315" width="100"/>
 <img src="https://github.com/user-attachments/assets/f9a5cdc8-e8b5-4c1b-b506-a8a256dcd731" width="100"/>
+
 (Farklı tema örnekleri kullanılmıştır)
 ---
 
