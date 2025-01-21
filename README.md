@@ -32,7 +32,7 @@
 - **Satın Alma İşlemleri**: Google Play Billing
 
 ### 📡 **Gerçek Zamanlı ve Arama Servisleri**
-- **Gerçek Zamanlı Bildirimler**: Typescript ile yazılmış Cloud Functions ve Cloud Messaging
+- **Gerçek Zamanlı Bildirimler**: Cloud Functions ve Cloud Messaging
 - **Planlanmış Bildirimler**: Cloud Functions ile entegre Cloud Scheduler
 - **Arama Özelliği**: Firebase Extensions ve Algolia entegrasyonu
 
