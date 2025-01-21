@@ -7,7 +7,18 @@
 - **Topluluklar** oluşturarak özel etkinlikler düzenleyebilir ve paylaşımlar yapabilirsiniz.
 - Yakınlarınızdaki etkinlikleri kolayca keşfedebilirsiniz.
 
+  
+<img src="https://github.com/user-attachments/assets/3fd0698e-7991-411c-b017-4c0d50aa2c32" width="100"/>
+<img src="https://github.com/user-attachments/assets/7b893422-fde5-4b39-8a2e-52ed2ac28742" width="100"/>
+<img src="https://github.com/user-attachments/assets/77c0c34c-2caa-4cfe-9161-b74cda7577e7" width="100"/>
+<img src="https://github.com/user-attachments/assets/d1c61e3c-2302-40f4-a97d-6461d5599496" width="100"/>
+<img src="https://github.com/user-attachments/assets/fcec15e5-711f-4005-8126-8b6f57e50fe0" width="100"/>
+<img src="https://github.com/user-attachments/assets/f2569ff1-d8c8-48ab-ae26-ef859b6d41eb" width="100"/>
+<img src="https://github.com/user-attachments/assets/b980340f-2e50-4381-abd5-a9c0acec0315" width="100"/>
+<img src="https://github.com/user-attachments/assets/f9a5cdc8-e8b5-4c1b-b506-a8a256dcd731" width="100"/>
+
 ---
+
 
 ## 🚀 Kullanılan Teknolojiler ve Kütüphaneler
 
