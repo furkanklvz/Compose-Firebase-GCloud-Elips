@@ -46,7 +46,7 @@
 - **Bağımlılık Enjeksiyonu**: Hilt
 
 ### 🛠️ **Diğer Araçlar ve Kütüphaneler**
-- **Görsel Yükleme**: Glide
+- **Görsel Yükleme**: Coil
 - **Asenkron İşlemler**: Kotlin Coroutines
 - **State Yönetimi**: Kotlin Flows
 - **Yerel Veri Depolama**: Datastore
