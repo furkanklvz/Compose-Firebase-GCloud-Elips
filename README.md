@@ -2,6 +2,8 @@
 
 **Elips**, insanların yakınlarındaki etkinlikleri keşfetmesini kolaylaştıran, kendi etkinliklerini organize etmelerine imkân tanıyan ve topluluklar oluşturarak aynı zevklere sahip ya da tanıdığı insanlar için topluluğa özel etkinlikler oluşturmasını sağlayan bir **sosyalleşme ve organize etme uygulamasıdır**.
 
+▶️ Google Play Store Link: https://play.google.com/store/apps/details?id=com.klavs.bindle
+
 🎉 **Elips ile Neler Yapabilirsiniz?**
 - **Spordan eğitime**, **yardımlaşmadan organizasyona** kadar geniş bir etkinlik yelpazesine ulaşabilirsiniz.
 - **Topluluklar** oluşturarak özel etkinlikler düzenleyebilir ve paylaşımlar yapabilirsiniz.
