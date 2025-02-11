@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -107,12 +108,14 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.klavs.bindle.R
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.sealedclasses.Gender
+import com.klavs.bindle.data.routes.ResetEmail
+import com.klavs.bindle.data.routes.ResetPassword
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.ProfileViewModel
-import com.klavs.bindle.util.TicketBottomSheet
+import com.klavs.bindle.helper.TicketBottomSheet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -135,7 +138,7 @@ fun Profile(
     viewModel: ProfileViewModel,
     navHostViewModel: NavHostViewModel
 ) {
-    val currentUser by viewModel.currentUser.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
@@ -152,8 +155,8 @@ fun Profile(
     var birthDayChanged by remember { mutableStateOf(false) }
     var userNameIsEmpty by remember { mutableStateOf(false) }
     var userNameAlreadyUsed by remember { mutableStateOf(false) }
-    val userResource by navHostViewModel.userResourceFlow.collectAsState()
-    val deletingAccountResource by viewModel.deletingAccountResource.collectAsState()
+    val userResource by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
+    val deletingAccountResource by viewModel.deletingAccountResource.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var showTicketSheet by remember { mutableStateOf(false) }
@@ -875,7 +878,7 @@ private fun Content(
                         clickedEditForEmail = {
                             if (!currentUser.providerData.map { it.providerId }
                                     .contains(GoogleAuthProvider.PROVIDER_ID)) {
-                                navController.navigate("reset_email")
+                                navController.navigate(ResetEmail)
                             } else {
                                 showSnackbar(context.getString(R.string.cannot_change_email_because_of_signing_in_with_google))
                             }
@@ -937,7 +940,7 @@ private fun Content(
             ) {
                 if (!currentUser.providerData.map { it.providerId }
                         .contains(GoogleAuthProvider.PROVIDER_ID)) {
-                    ChangePasswordButton { navController.navigate("reset_password") }
+                    ChangePasswordButton { navController.navigate(ResetPassword) }
                 }
                 TextButton(
                     colors = ButtonDefaults.textButtonColors(

@@ -21,6 +21,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.sealedclasses.MenuItem
+import com.klavs.bindle.data.routes.Language
+import com.klavs.bindle.data.routes.Theme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,10 +41,10 @@ fun AppSettings(navController: NavHostController) {
     }) { innerPadding ->
         val menuItems = listOf(
             MenuItem.Theme{
-                navController.navigate("theme")
+                navController.navigate(Theme)
             },
             MenuItem.Language{
-                navController.navigate("language")
+                navController.navigate(Language)
             }
         )
         LazyColumn(

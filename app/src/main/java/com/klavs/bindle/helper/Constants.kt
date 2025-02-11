@@ -1,4 +1,4 @@
-package com.klavs.bindle.util
+package com.klavs.bindle.helper
 
 import com.klavs.bindle.data.entity.sealedclasses.EventType
 

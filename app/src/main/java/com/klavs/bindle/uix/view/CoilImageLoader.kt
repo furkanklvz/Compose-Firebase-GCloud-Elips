@@ -9,7 +9,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 
 @Composable
-fun CoilImageLoader(url: String, context:Context, modifier: Modifier, contentDescription: String? = null) {
+fun CoilImageLoader(url: String, context:Context, modifier: Modifier, contentDescription: String) {
     AsyncImage(
         model = ImageRequest.Builder(context)
             .data(url)

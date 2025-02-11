@@ -1,4 +1,4 @@
-package com.klavs.bindle.util
+package com.klavs.bindle.helper
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults

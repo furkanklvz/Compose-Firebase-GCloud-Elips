@@ -44,6 +44,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -52,8 +54,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,28 +69,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.firebase.auth.FirebaseUser
 import com.klavs.bindle.R
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.User
+import com.klavs.bindle.data.routes.CommunityPage
+import com.klavs.bindle.data.routes.EventPage
+import com.klavs.bindle.data.routes.LogIn
+import com.klavs.bindle.data.routes.Profile
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.LightRed
 import com.klavs.bindle.uix.view.event.getEventIconFromValue
-import com.klavs.bindle.util.EventBottomSheet
+import com.klavs.bindle.helper.EventBottomSheet
 import com.klavs.bindle.uix.viewmodel.communities.CommunityEventListViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
-import com.klavs.bindle.util.TicketBottomSheet
-import com.klavs.bindle.util.UnverifiedAccountAlertDialog
+import com.klavs.bindle.helper.TicketBottomSheet
+import com.klavs.bindle.helper.UnverifiedAccountAlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ActiveEventsListPage(
     navController: NavHostController,
@@ -99,12 +108,12 @@ fun ActiveEventsListPage(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val upcomingEventsResource by communityPageViewModel.upcomingEventsResourceFlow.collectAsState()
-    val myMemberDocResource by communityPageViewModel.myMemberDocResource.collectAsState()
-    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
-    val unlinkEventResource by eventListViewModel.unlinkEventResource.collectAsState()
+    val upcomingEventsResource by communityPageViewModel.upcomingEventsResourceFlow.collectAsStateWithLifecycle()
+    val myMemberDocResource by communityPageViewModel.myMemberDocResource.collectAsStateWithLifecycle()
+    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
+    val unlinkEventResource by eventListViewModel.unlinkEventResource.collectAsStateWithLifecycle()
     val pastEvents = remember { mutableStateListOf<Event>() }
-    val pastEventsResource by eventListViewModel.pastEvents.collectAsState()
+    val pastEventsResource by eventListViewModel.pastEvents.collectAsStateWithLifecycle()
     LaunchedEffect(pastEventsResource) {
         if (pastEventsResource is Resource.Success && pastEventsResource.data != null) {
             pastEvents.addAll(pastEventsResource.data!!)
@@ -134,14 +143,14 @@ fun ActiveEventsListPage(
         onBackClick = { navController.popBackStack() },
         scope = scope,
         snackbarHostState = snackbarHostState,
-        goToProfile = { navController.navigate("menu_profile") },
+        goToProfile = { navController.navigate(Profile) },
         communityName = communityName,
         userResourceFlow = userResourceFlow,
         currentUser = currentUser,
-        goToCommunityPage = { navController.navigate("community_page/$it") },
+        goToCommunityPage = { navController.navigate(CommunityPage(it)) },
         navHostViewModel = navHostViewModel,
-        navigateToEventPage = { navController.navigate("event_page/$it") },
-        navigateToLogIn = { navController.navigate("log_in") },
+        navigateToEventPage = { navController.navigate(EventPage(it)) },
+        navigateToLogIn = { navController.navigate(LogIn) },
         pastEventsResource = pastEventsResource,
         upcomingEventsResoure = upcomingEventsResource,
         getPasEvents = {
@@ -160,11 +169,11 @@ fun ActiveEventsListPage(
         },
         thereIsLastPastEvent = eventListViewModel.lastPastEvent != null,
         pastEvents = pastEvents,
-        tryAgainOnClick = {communityPageViewModel.getUpcomingEvents(communityId)}
+        tryAgainOnClick = { communityPageViewModel.getUpcomingEvents(communityId) }
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CommunityEventListContent(
     onBackClick: () -> Unit,
@@ -179,7 +188,7 @@ private fun CommunityEventListContent(
     currentUser: FirebaseUser? = null,
     thereIsLastPastEvent: Boolean,
     userResourceFlow: Resource<User>,
-    tryAgainOnClick :()->Unit,
+    tryAgainOnClick: () -> Unit,
     getPasEvents: (Int) -> Unit,
     resetLastPastEvent: () -> Unit,
     pastEvents: List<Event>,
@@ -200,7 +209,27 @@ private fun CommunityEventListContent(
             SnackbarHost(hostState = snackbarHostState, modifier = Modifier.imePadding())
         },
         topBar = {
-            TopAppBar(
+            MediumTopAppBar(
+                actions = {
+                    val tooltipState = rememberTooltipState(
+                        isPersistent = true
+                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(
+                            onClick = {scope.launch { tooltipState.show() }}
+                        ) {
+                            Text(
+                                stringResource(R.string.linking_event_to_community),
+                                style = MaterialTheme.typography.labelSmall)
+                        }
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                            tooltip = {PlainTooltip { Text(stringResource(R.string.community_event_help_text)) }},
+                            state = tooltipState
+                        ) {}
+                    }
+
+                },
                 navigationIcon = {
                     IconButton(
                         onClick = onBackClick
@@ -237,11 +266,13 @@ private fun CommunityEventListContent(
                 if (userResourceFlow is Resource.Success) {
                     if (currentUser != null) {
                         TicketBottomSheet(
-                            onDismiss = { scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
-                                if (!ticketSheetState.isVisible){
-                                    showTicketSheet = false
+                            onDismiss = {
+                                scope.launch { ticketSheetState.hide() }.invokeOnCompletion {
+                                    if (!ticketSheetState.isVisible) {
+                                        showTicketSheet = false
+                                    }
                                 }
-                            } },
+                            },
                             uid = currentUser.uid,
                             tickets = userResourceFlow.data!!.tickets,
                             sheetState = ticketSheetState
@@ -255,7 +286,7 @@ private fun CommunityEventListContent(
                     EventBottomSheet(
                         onDismiss = {
                             scope.launch { eventBottomSheetState.hide() }.invokeOnCompletion {
-                                if (!eventBottomSheetState.isVisible){
+                                if (!eventBottomSheetState.isVisible) {
                                     showEventBottomSheet = null
                                 }
                             }
@@ -421,8 +452,10 @@ private fun UpcomingEventList(
                     IconButton(
                         onClick = tryAgainOnClick
                     ) {
-                        Icon(imageVector = Icons.Rounded.RestartAlt,
-                            contentDescription = "retry")
+                        Icon(
+                            imageVector = Icons.Rounded.RestartAlt,
+                            contentDescription = "retry"
+                        )
                     }
                 }
             }
@@ -533,8 +566,10 @@ private fun UpcomingEventList(
                             },
                             supportingContent = {
                                 if (!event.privateInfo) {
-                                    Row(verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Rounded.AccessTime,
                                             contentDescription = "time",
@@ -696,7 +731,7 @@ private fun PastEventList(
 }
 
 
-@Preview
+@Preview(locale = "tr")
 @Composable
 private fun ActiveEventsListPagePreview() {
 

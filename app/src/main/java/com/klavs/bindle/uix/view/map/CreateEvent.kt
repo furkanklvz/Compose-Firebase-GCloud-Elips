@@ -85,11 +85,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.Timestamp
 import com.klavs.bindle.R
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.sealedclasses.EventType
 import com.klavs.bindle.data.entity.sealedclasses.HidingDataOptions
@@ -102,7 +103,7 @@ import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.view.communities.getRoleNameFromRolePriority
 import com.klavs.bindle.uix.viewmodel.MapViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
-import com.klavs.bindle.util.Constants
+import com.klavs.bindle.helper.Constants
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -227,8 +228,8 @@ private fun Content(
     var eventDescription by remember {
         mutableStateOf("")
     }
-    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
-    val joinedCommunitiesResource by viewModel.joinedCommunities.collectAsState()
+    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
+    val joinedCommunitiesResource by viewModel.joinedCommunities.collectAsStateWithLifecycle()
     var onlyByRequest by remember { mutableStateOf(true) }
     var privateEvent by remember { mutableStateOf(false) }
     var hideDate by remember { mutableStateOf(false) }
@@ -692,7 +693,8 @@ private fun CommunityRow(
                     CoilImageLoader(
                         url = community.communityPictureUrl,
                         context = context,
-                        modifier = Modifier.matchParentSize()
+                        modifier = Modifier.matchParentSize(),
+                        community.name
                     )
                 } else {
                     Image(
@@ -971,7 +973,7 @@ fun ParticipationInfos(
                                 leadingIcon = {
                                     Icon(
                                         imageVector = participationOption.imageVector,
-                                        contentDescription = ""
+                                        contentDescription = stringResource(participationOption.titleResID)
                                     )
                                 },
                                 onClick = {
@@ -1007,7 +1009,7 @@ fun ParticipationInfos(
                         leadingIcon = {
                             Icon(
                                 imageVector = hideDataSelectedValue.imageVector,
-                                contentDescription = ""
+                                contentDescription = stringResource(hideDataSelectedValue.titleResID)
                             )
                         },
                         text = { Text(text = stringResource(hideDataSelectedValue.titleResID)) },
@@ -1026,7 +1028,7 @@ fun ParticipationInfos(
                                 leadingIcon = {
                                     Icon(
                                         imageVector = hidingDataOption.imageVector,
-                                        contentDescription = ""
+                                        contentDescription = stringResource(hidingDataOption.titleResID)
                                     )
                                 },
                                 onClick = {

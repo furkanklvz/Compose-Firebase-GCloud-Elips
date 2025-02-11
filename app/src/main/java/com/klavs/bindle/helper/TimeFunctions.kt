@@ -1,16 +1,8 @@
-package com.klavs.bindle.util
+package com.klavs.bindle.helper
 
 import android.content.Context
-import android.util.Log
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.google.firebase.Timestamp
 import com.klavs.bindle.R
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDateTime
@@ -105,7 +97,7 @@ class TimeFunctions {
     }
 
 
-    fun getHourAndMinuteFromTimestamp(timestamp: Timestamp): Pair<Int, Int> {
+    /*fun getHourAndMinuteFromTimestamp(timestamp: Timestamp): Pair<Int, Int> {
         val date = timestamp.toDate()
 
         val calendar = Calendar.getInstance()
@@ -115,7 +107,7 @@ class TimeFunctions {
         val minute = calendar.get(Calendar.MINUTE) // Dakika
 
         return Pair(hour, minute)
-    }
+    }*/
 
     fun convertDatePickerTimeToTimestamp(millis: Long): Timestamp {
         // Millis değeri UTC zaman diliminde LocalDateTime'a dönüştürülür

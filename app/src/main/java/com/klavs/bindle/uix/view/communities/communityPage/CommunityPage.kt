@@ -102,6 +102,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -118,17 +119,22 @@ import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.Post
 import com.klavs.bindle.data.entity.PostComment
 import com.klavs.bindle.data.entity.User
+import com.klavs.bindle.data.routes.CommunityPage
+import com.klavs.bindle.data.routes.CreatePost
+import com.klavs.bindle.data.routes.EventPage
+import com.klavs.bindle.data.routes.LogIn
+import com.klavs.bindle.data.routes.Profile
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.view.communities.communityPage.bottomsheets.MembersBottomSheet
 import com.klavs.bindle.uix.view.communities.communityPage.bottomsheets.RequestsBottomSheet
 import com.klavs.bindle.uix.view.communities.communityPage.bottomsheets.SettingsBottomSheet
 import com.klavs.bindle.uix.view.communities.communityPage.bottomsheets.UpdateCommunityNameOrDescriptionBottomSheet
-import com.klavs.bindle.util.EventBottomSheet
+import com.klavs.bindle.helper.EventBottomSheet
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
 import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
-import com.klavs.bindle.util.TicketBottomSheet
-import com.klavs.bindle.util.UnverifiedAccountAlertDialog
+import com.klavs.bindle.helper.TicketBottomSheet
+import com.klavs.bindle.helper.UnverifiedAccountAlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -146,14 +152,14 @@ fun CommunityPage(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val communityResource by viewModel.community.collectAsState()
-    val myMemberDocResource by viewModel.myMemberDocResource.collectAsState()
-    val didISendRequest by viewModel.didISendRequest.collectAsState()
-    val numberOfMembers by viewModel.numberOfMembers.collectAsState()
-    val numberOfRequests by viewModel.numberOfRequests.collectAsState()
-    val upcomingEventsResource by viewModel.upcomingEventsResourceFlow.collectAsState()
-    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
-    val numOfEvents by viewModel.numOfEvents.collectAsState()
+    val communityResource by viewModel.community.collectAsStateWithLifecycle()
+    val myMemberDocResource by viewModel.myMemberDocResource.collectAsStateWithLifecycle()
+    val didISendRequest by viewModel.didISendRequest.collectAsStateWithLifecycle()
+    val numberOfMembers by viewModel.numberOfMembers.collectAsStateWithLifecycle()
+    val numberOfRequests by viewModel.numberOfRequests.collectAsStateWithLifecycle()
+    val upcomingEventsResource by viewModel.upcomingEventsResourceFlow.collectAsStateWithLifecycle()
+    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
+    val numOfEvents by viewModel.numOfEvents.collectAsStateWithLifecycle()
 
     LaunchedEffect(myMemberDocResource) {
         if (myMemberDocResource is Resource.Success) {
@@ -369,13 +375,13 @@ private fun Content(
             if ((!community.postSharingRestriction || rolePriority != CommunityRoles.Member.rolePriority) && (rolePriority != null && currentUser != null)) {
                 FloatingActionButton(
                     onClick = {
-                        navController.navigate("createPost/${community.id}")
+                        navController.navigate(CreatePost(community.id))
                     }
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Rounded.PostAdd,
-                            contentDescription = null,
+                            contentDescription = "Create Post",
                             modifier = Modifier.padding(start = 5.dp)
                         )
                         Text(
@@ -927,7 +933,7 @@ private fun Content(
                 UnverifiedAccountAlertDialog(
                     onDismiss = { showUnverifiedAccountAlertDialog = false }
                 ) {
-                    navController.navigate("menu_profile")
+                    navController.navigate(Profile)
                 }
             }
             if (openSharingDialog) {
@@ -1030,7 +1036,7 @@ private fun Content(
                         },
                         sheetState = eventBottomSheetState,
                         context = LocalContext.current,
-                        onCommunityClick = { navController.navigate("community_page/$it") },
+                        onCommunityClick = { navController.navigate(CommunityPage(it)) },
                         currentUser = currentUser,
                         event = showEventBottomSheet!!,
                         navHostViewModel = navHostViewModel,
@@ -1039,9 +1045,9 @@ private fun Content(
                             showUnverifiedAccountAlertDialog = true
                         },
                         navigateToEventPage = {
-                            navController.navigate("event_page/${showEventBottomSheet!!.id}")
+                            navController.navigate(EventPage(it))
                         },
-                        onLogInClick = { navController.navigate("log_in") }
+                        onLogInClick = { navController.navigate(LogIn) }
                     )
                 }
             }
@@ -1219,7 +1225,7 @@ private fun Content(
                                 actionLabel = context.getString(R.string.sign_in)
                             )
                             when (result) {
-                                SnackbarResult.ActionPerformed -> navController.navigate("log_in")
+                                SnackbarResult.ActionPerformed -> navController.navigate(LogIn)
                                 SnackbarResult.Dismissed -> {}
                             }
                         }
@@ -1259,7 +1265,7 @@ private fun Content(
                                 actionLabel = context.getString(R.string.sign_in)
                             )
                             when (result) {
-                                SnackbarResult.ActionPerformed -> navController.navigate("log_in")
+                                SnackbarResult.ActionPerformed -> navController.navigate(LogIn)
                                 SnackbarResult.Dismissed -> {}
                             }
                         }

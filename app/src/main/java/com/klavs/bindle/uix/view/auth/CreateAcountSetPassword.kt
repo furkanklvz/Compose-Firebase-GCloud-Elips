@@ -38,7 +38,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -62,10 +61,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.User
+import com.klavs.bindle.data.routes.Greeting
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.CreateUserViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CreateUserSetPassword(
     navController: NavHostController,
@@ -100,7 +99,7 @@ fun CreateUserSetPassword(
             is Resource.Idle -> {}
             is Resource.Success -> {
                 isLoading = false
-                navController.navigate("greeting") {
+                navController.navigate(Greeting) {
                     popUpTo(0) {
                         inclusive = true
                     }
@@ -179,7 +178,7 @@ private fun CreateUserSetPasswordContent(
             if (termsOfServiceExpanded) {
                 AlertDialog(
                     icon = {
-                        Icon(imageVector = Icons.Rounded.PrivacyTip, contentDescription = "")
+                        Icon(imageVector = Icons.Rounded.PrivacyTip, contentDescription = "Terms of Services")
                     },
                     onDismissRequest = { termsOfServiceExpanded = false },
                     dismissButton = {
@@ -229,7 +228,7 @@ private fun CreateUserSetPasswordContent(
             if (privacyPolicyExpanded) {
                 AlertDialog(
                     icon = {
-                        Icon(imageVector = Icons.Rounded.PrivacyTip, contentDescription = "")
+                        Icon(imageVector = Icons.Rounded.PrivacyTip, contentDescription = "Privacy Policy")
                     },
                     onDismissRequest = { privacyPolicyExpanded = false },
                     dismissButton = {
@@ -415,7 +414,7 @@ private fun CreateUserSetPasswordContent(
                             Text(text = stringResource(R.string.register))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
-                                contentDescription = "",
+                                contentDescription = "Register",
                                 modifier = Modifier.size(IconButtonDefaults.xSmallIconSize)
                             )
                         }

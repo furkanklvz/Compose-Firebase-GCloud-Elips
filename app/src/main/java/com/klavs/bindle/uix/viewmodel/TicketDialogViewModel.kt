@@ -18,7 +18,7 @@ import com.klavs.bindle.data.repo.firestore.FirestoreRepository
 import com.klavs.bindle.data.repo.googleplaybilling.GooglePlayBillingRepository
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.resource.RewardedAdResource
-import com.klavs.bindle.util.UtilFunctions
+import com.klavs.bindle.helper.UtilFunctions
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

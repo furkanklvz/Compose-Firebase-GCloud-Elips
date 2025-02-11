@@ -49,9 +49,11 @@ import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.klavs.bindle.R
-import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
+import com.klavs.bindle.data.routes.Home
 import com.klavs.bindle.ui.theme.logoFont
 import kotlinx.coroutines.launch
+
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -140,12 +142,11 @@ fun Greeting(navController: NavHostController) {
                                 .padding(end = 5.dp)
                                 .align(Alignment.CenterEnd),
                             onClick = {
-                                navController.navigate(BottomNavItem.Home.route){
+                                navController.navigate(Home){
                                     popUpTo(0){
                                         inclusive = true
                                     }
                                 }
-
                             }
                         ) {
                             Row(

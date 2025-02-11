@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.klavs.bindle.R
 import com.klavs.bindle.data.datastore.AppPref
@@ -21,10 +20,10 @@ import com.klavs.bindle.resource.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.contentOrNull
@@ -50,6 +49,7 @@ class CommunityViewModel @Inject constructor(
 
     var communitiesJob: Job? = null
     var pinnedCommunitiesJob: Job? = null
+    var searchCommunitiesJob: Job? = null
 
     val createCommunityState: MutableState<Resource<String>> = mutableStateOf(Resource.Idle())
     val leaveCommunityState = mutableStateOf<Resource<String>>(Resource.Idle())
@@ -77,7 +77,9 @@ class CommunityViewModel @Inject constructor(
     fun searchCommunity(searchQuery: String) {
         if (searchQuery.isNotBlank()) {
             _searchResults.value = Resource.Loading()
-            viewModelScope.launch(Dispatchers.Main) {
+            searchCommunitiesJob?.cancel()
+            searchCommunitiesJob = viewModelScope.launch(Dispatchers.Main) {
+                delay(750)
                 val result = algoliaRepo.searchCommunity(
                     searchQuery = searchQuery,
                     resultSize = 7

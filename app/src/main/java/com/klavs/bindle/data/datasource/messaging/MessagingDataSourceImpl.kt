@@ -15,6 +15,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.RemoteMessage
+import com.klavs.bindle.MainActivity
 import com.klavs.bindle.R
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -175,7 +176,9 @@ class MessagingDataSourceImpl @Inject constructor(
         message: RemoteMessage.Notification,
         eventId: String?
     ) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("bindle://event_chat/$eventId/${-1}"))
+        val intent = Intent(context, MainActivity::class.java)
+        intent.setAction("OPEN_CHAT")
+        intent.putExtra("eventId", eventId)
         val pendingIntent = PendingIntent.getActivity(
             context,
             0,
@@ -224,7 +227,10 @@ class MessagingDataSourceImpl @Inject constructor(
             .setAutoCancel(true)
 
         if (eventId != null) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("bindle://event_page/$eventId"))
+            val intent = Intent(context, MainActivity::class.java)
+            intent.setAction("OPEN_EVENT")
+            intent.putExtra("eventId", eventId)
+
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
@@ -283,7 +289,9 @@ class MessagingDataSourceImpl @Inject constructor(
             .setAutoCancel(true)
 
         if (eventId != null) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("bindle://event_page/$eventId"))
+            val intent = Intent(context, MainActivity::class.java)
+            intent.setAction("OPEN_EVENT")
+            intent.putExtra("eventId", eventId)
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
@@ -320,8 +328,9 @@ class MessagingDataSourceImpl @Inject constructor(
             .setAutoCancel(true)
 
         if (communityId != null) {
-            val intent =
-                Intent(Intent.ACTION_VIEW, Uri.parse("bindle://community_page/$communityId"))
+            val intent = Intent(context, MainActivity::class.java)
+            intent.setAction("OPEN_COMMUNITY")
+            intent.putExtra("communityId", communityId)
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
@@ -359,7 +368,10 @@ class MessagingDataSourceImpl @Inject constructor(
 
 
         if (communityId != null && postId != null) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("bindle://post/$communityId/$postId"))
+            val intent = Intent(context, MainActivity::class.java)
+            intent.setAction("OPEN_POST")
+            intent.putExtra("communityId", communityId)
+            intent.putExtra("postId", postId)
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
@@ -397,7 +409,10 @@ class MessagingDataSourceImpl @Inject constructor(
 
 
         if (communityId != null && postId != null) {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("bindle://post/$communityId/$postId"))
+            val intent = Intent(context, MainActivity::class.java)
+            intent.setAction("OPEN_POST")
+            intent.putExtra("communityId", communityId)
+            intent.putExtra("postId", postId)
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 0,
@@ -433,8 +448,9 @@ class MessagingDataSourceImpl @Inject constructor(
 
 
         if (communityId != null) {
-            val intent =
-                Intent(Intent.ACTION_VIEW, Uri.parse("bindle://community_page/$communityId"))
+            val intent = Intent(context, MainActivity::class.java)
+            intent.setAction("OPEN_COMMUNITY")
+            intent.putExtra("communityId", communityId)
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 0,

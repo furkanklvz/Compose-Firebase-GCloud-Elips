@@ -80,6 +80,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
@@ -97,7 +98,7 @@ import com.klavs.bindle.data.entity.PostComment
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
 import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -109,15 +110,15 @@ fun Post(
     navController: NavHostController,
     currentUser: FirebaseUser,
     viewModel: PostViewModel,
-    communityPageViewmModel: CommunityPageViewModel
+    communityPageViewModel: CommunityPageViewModel
 ) {
 
     val context = LocalContext.current
-    val postResource by viewModel.postResource.collectAsState()
+    val postResource by viewModel.postResource.collectAsStateWithLifecycle()
     var post by remember { mutableStateOf<Post?>(null) }
-    val commentsResource by viewModel.pagedComments.collectAsState()
+    val commentsResource by viewModel.pagedComments.collectAsStateWithLifecycle()
     val commentsList = remember { mutableStateListOf<PostComment>() }
-    val myMemberDocResource by communityPageViewmModel.myMemberDocResource.collectAsState()
+    val myMemberDocResource by communityPageViewModel.myMemberDocResource.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -130,6 +131,7 @@ fun Post(
     LaunchedEffect(viewModel.deleteCommentState.value) {
         if (viewModel.deleteCommentState.value is Resource.Success) {
             commentsList.removeIf { it.id == viewModel.deleteCommentState.value.data }
+            post = post?.copy(numOfComments = post?.numOfComments?.minus(1))
         }
     }
     LaunchedEffect(viewModel.deletePostState.value) {
@@ -140,6 +142,7 @@ fun Post(
     LaunchedEffect(viewModel.commentOnState.value) {
         if (viewModel.commentOnState.value is Resource.Success) {
             commentsList.add(0, viewModel.commentOnState.value.data!!)
+            post = post?.copy(numOfComments = post?.numOfComments?.plus(1))
         }
     }
 
@@ -148,7 +151,7 @@ fun Post(
             post = postResource.data!!
             if (postResource.data!!.communityId != myMemberDocResource.data?.communityId) {
                 Log.d("community page", "rol tekrar yüklendi")
-                communityPageViewmModel.listenToMyMemberDoc(
+                communityPageViewModel.listenToMyMemberDoc(
                     communityId = postResource.data!!.communityId ?: "",
                     myUid = currentUser.uid
                 )
@@ -1102,14 +1105,14 @@ private fun PostContent(
                             onLikeClick(false)
                         }) {
                             Icon(
-                                Icons.Rounded.Favorite, null, tint = Color.Red
+                                Icons.Rounded.Favorite, "liked", tint = Color.Red
                             )
                         }
                     } else {
                         IconButton(onClick = {
                             onLikeClick(true)
                         }) {
-                            Icon(Icons.Rounded.FavoriteBorder, null)
+                            Icon(Icons.Rounded.FavoriteBorder, "like")
                         }
                     }
                     Text(post.numOfLikes?.toString() ?: "")
@@ -1120,7 +1123,7 @@ private fun PostContent(
                         IconButton(
                             onClick = onCommentClick
                         ) {
-                            Icon(Icons.Rounded.ChatBubbleOutline, null)
+                            Icon(Icons.Rounded.ChatBubbleOutline, "Comment on")
                         }
                         Text(post.numOfComments?.toString() ?: "")
                     }

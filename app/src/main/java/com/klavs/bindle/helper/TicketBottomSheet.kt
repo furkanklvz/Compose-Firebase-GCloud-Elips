@@ -1,4 +1,4 @@
-package com.klavs.bindle.util
+package com.klavs.bindle.helper
 
 import android.app.Activity
 import android.util.Log
@@ -60,6 +60,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klavs.bindle.R
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.resource.RewardedAdResource
@@ -76,11 +77,11 @@ fun TicketBottomSheet(
     val context = LocalContext.current
     val activity = context as? Activity
     val viewModel = hiltViewModel<TicketDialogViewModel>()
-    val productsResource by viewModel.productsResource.collectAsState()
+    val productsResource by viewModel.productsResource.collectAsStateWithLifecycle()
     var isRewardButtonClicked by remember { mutableStateOf(false) }
-    val rewardedAd by viewModel.rewardedAd.collectAsState()
-    val rewardedAdContentStateResource by viewModel.rewardedAdContentStateResource.collectAsState()
-    val rewardResource by viewModel.rewardResource.collectAsState()
+    val rewardedAd by viewModel.rewardedAd.collectAsStateWithLifecycle()
+    val rewardedAdContentStateResource by viewModel.rewardedAdContentStateResource.collectAsStateWithLifecycle()
+    val rewardResource by viewModel.rewardResource.collectAsStateWithLifecycle()
     var isLoading by remember { mutableStateOf(false) }
 
 

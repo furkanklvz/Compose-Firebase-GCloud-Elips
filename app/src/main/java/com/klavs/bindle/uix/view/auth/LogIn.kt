@@ -64,7 +64,9 @@ import androidx.navigation.NavHostController
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.firebase.auth.AuthResult
 import com.klavs.bindle.R
-import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
+import com.klavs.bindle.data.routes.CreateUser
+import com.klavs.bindle.data.routes.Greeting
+import com.klavs.bindle.data.routes.Home
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.logoFont
 import com.klavs.bindle.uix.viewmodel.LogInViewModel
@@ -102,14 +104,14 @@ fun LogIn(navController: NavHostController, viewModel: LogInViewModel) {
             is Resource.Success -> {
                 isLoading = false
                 if (resource.data!!.additionalUserInfo!!.isNewUser) {
-                    navController.navigate("greeting") {
-                        popUpTo(navController.currentDestination?.route ?: "") {
+                    navController.navigate(Greeting) {
+                        popUpTo(0) {
                             inclusive = true
                         }
                     }
                 } else {
-                    navController.navigate(BottomNavItem.Home.route) {
-                        popUpTo(navController.currentDestination?.route ?: "") {
+                    navController.navigate(Home) {
+                        popUpTo(0) {
                             inclusive = true
                         }
                     }
@@ -132,8 +134,8 @@ fun LogIn(navController: NavHostController, viewModel: LogInViewModel) {
             is Resource.Idle -> {}
             is Resource.Success -> {
                 isLoading = false
-                navController.navigate(BottomNavItem.Home.route) {
-                    popUpTo(navController.currentDestination?.route ?: "") {
+                navController.navigate(Home) {
+                    popUpTo(0) {
                         inclusive = true
                     }
                 }
@@ -162,7 +164,7 @@ fun LogIn(navController: NavHostController, viewModel: LogInViewModel) {
         logIn = {
             viewModel.logIn(it.first, it.second)
         },
-        navigateToCreatUser = { navController.navigate("create_user") },
+        navigateToCreatUser = { navController.navigate(CreateUser) },
         signInWithGoogle = {viewModel.onSignInWithGoogle(it)}
     )
 }

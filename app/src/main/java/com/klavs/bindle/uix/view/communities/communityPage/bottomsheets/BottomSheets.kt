@@ -53,7 +53,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,11 +69,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.klavs.bindle.R
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.community.Community
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.data.entity.RequestForCommunity
@@ -300,7 +300,7 @@ fun RequestsBottomSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val requests by viewModel.joiningRequests.collectAsState()
+    val requests by viewModel.joiningRequests.collectAsStateWithLifecycle()
     val requestList = remember { mutableStateListOf<RequestForCommunity>() }
     var isLoading by remember { mutableStateOf(false) }
     var hasError by remember { mutableStateOf(false) }
@@ -576,7 +576,7 @@ fun MembersBottomSheet(
     viewModel: CommunityPageViewModel,
 ) {
     val context = LocalContext.current
-    val members by viewModel.members.collectAsState()
+    val members by viewModel.members.collectAsStateWithLifecycle()
     val memberList = remember { mutableStateListOf<Member>() }
     var isLoading by remember { mutableStateOf(false) }
     var hasError by remember { mutableStateOf(false) }

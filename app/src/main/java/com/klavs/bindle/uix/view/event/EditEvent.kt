@@ -42,7 +42,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.firebase.Timestamp
 import com.klavs.bindle.R
@@ -70,8 +70,8 @@ import com.klavs.bindle.uix.view.map.ParticipationInfos
 import com.klavs.bindle.uix.view.map.SelectCommunityDialog
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.event.EditEventViewModel
-import com.klavs.bindle.util.Constants
-import com.klavs.bindle.util.TicketBottomSheet
+import com.klavs.bindle.helper.Constants
+import com.klavs.bindle.helper.TicketBottomSheet
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -86,10 +86,10 @@ fun EditEvent(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val linkedCommunitiesResource by viewModel.linkedCommunitiesResource.collectAsState()
-    val joinedCommunitiesResource by viewModel.joinedCommunitiesResource.collectAsState()
-    val saveEventState by viewModel.changesResource.collectAsState()
-    val userResource by navHostViewModel.userResourceFlow.collectAsState()
+    val linkedCommunitiesResource by viewModel.linkedCommunitiesResource.collectAsStateWithLifecycle()
+    val joinedCommunitiesResource by viewModel.joinedCommunitiesResource.collectAsStateWithLifecycle()
+    val saveEventState by viewModel.changesResource.collectAsStateWithLifecycle()
+    val userResource by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
     var showTicketSheet by remember { mutableStateOf(false) }
     val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 

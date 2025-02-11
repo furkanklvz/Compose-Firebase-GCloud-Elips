@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.NavigateNext
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -81,6 +80,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.klavs.bindle.R
+import com.klavs.bindle.data.routes.CreateUserPhaseTwo
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.CreateUserViewModel
 import kotlinx.coroutines.launch
@@ -122,7 +122,7 @@ fun CreateAccount(navController: NavHostController) {
                         modifier = Modifier.size(50.dp)
                     )
                 },
-                title = { Text(text = "Register") })
+                title = { Text(text = stringResource(R.string.register)) })
         }) { innerPadding ->
 
         val userName = rememberSaveable {
@@ -208,11 +208,11 @@ fun CreateAccount(navController: NavHostController) {
                         } else "default"
                         val encodedEmail = Uri.encode(email.value.trim())
                         val encodedUserName = Uri.encode(userName.value.trim())
-                        navController.navigate("create_user_phase_three/${encodedUri}/$encodedUserName/$encodedEmail") {
-                            popUpTo("create_account") {
-                                saveState = true
-                            }
-                        }
+                        navController.navigate(CreateUserPhaseTwo(
+                            profilePictureUri = encodedUri,
+                            username = encodedUserName,
+                            email = encodedEmail
+                        ))
                     } else {
                         scope.launch {
                             snackbarHostState.showSnackbar(
@@ -445,7 +445,7 @@ fun CreateAccount(navController: NavHostController) {
                                 Text(text = stringResource(R.string.next))
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Rounded.NavigateNext,
-                                    contentDescription = ""
+                                    contentDescription = "Next"
                                 )
                             }
                         }

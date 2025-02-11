@@ -10,5 +10,6 @@ data class PostComment(
     val senderRolePriority: Int? = null,
     val commentText: String ="",
     val date: Timestamp = Timestamp.now(),
-    val isMyComment: Boolean? = null
+    val isMyComment: Boolean? = null,
+    val postId:String = ""
 )

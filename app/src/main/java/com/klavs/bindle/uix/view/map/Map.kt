@@ -2,7 +2,10 @@ package com.klavs.bindle.uix.view.map
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.location.Location
 import android.net.Uri
 import android.provider.Settings
@@ -34,9 +37,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -48,7 +48,6 @@ import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.rounded.AddLocationAlt
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Celebration
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -99,7 +98,6 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -117,7 +115,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontStyle
@@ -128,6 +125,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -135,6 +133,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -144,27 +143,30 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.klavs.bindle.R
-import com.klavs.bindle.util.TimeFunctions
-import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.User
 import com.klavs.bindle.data.entity.sealedclasses.EventType
+import com.klavs.bindle.data.routes.CommunityPage
+import com.klavs.bindle.data.routes.CreateEvent
+import com.klavs.bindle.data.routes.EventPage
+import com.klavs.bindle.data.routes.LogIn
+import com.klavs.bindle.data.routes.Profile
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
 import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.view.event.getEventIconFromValue
 import com.klavs.bindle.uix.viewmodel.MapViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
-import com.klavs.bindle.util.Constants
-import com.klavs.bindle.util.EventBottomSheet
-import com.klavs.bindle.util.TicketBottomSheet
-import com.klavs.bindle.util.UnverifiedAccountAlertDialog
+import com.klavs.bindle.helper.Constants
+import com.klavs.bindle.helper.EventBottomSheet
+import com.klavs.bindle.helper.TicketBottomSheet
+import com.klavs.bindle.helper.UnverifiedAccountAlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -185,11 +187,10 @@ fun Map(
     var autoTakeEvents by rememberSaveable { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val isSystemInDarkTheme = isSystemInDarkTheme()
     val context = LocalContext.current
 
     val mapIsLoading = remember { mutableStateOf(true) }
-    val searchResultResource by viewModel.searchResults.collectAsState()
+    val searchResultResource by viewModel.searchResults.collectAsStateWithLifecycle()
     val locationPermission =
         rememberPermissionState(permission = Manifest.permission.ACCESS_FINE_LOCATION)
 
@@ -198,9 +199,9 @@ fun Map(
     var currentLocation by remember {
         mutableStateOf<Location?>(null)
     }
-    val DEFAULT_CAMERA_LOCATION = LatLng(46.031376, 29.229242)
+    val defaultCameraLocation = LatLng(46.031376, 29.229242)
     val firstCameraLocation = remember {
-        mutableStateOf(DEFAULT_CAMERA_LOCATION)
+        mutableStateOf(defaultCameraLocation)
     }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
@@ -308,13 +309,13 @@ fun Map(
     var properties by remember {
         mutableStateOf(
             MapProperties(
-                mapType = MapType.NORMAL,
                 isMyLocationEnabled = locationPermission.status.isGranted,
                 maxZoomPreference = 20f
             )
         )
     }
-    val theme = viewModel.themeState.collectAsState()
+    val theme = viewModel.themeState.collectAsStateWithLifecycle()
+    val isSystemInDarkTheme = isSystemInDarkTheme()
     LaunchedEffect(key1 = theme.value) {
         properties = properties.copy(
             mapStyleOptions =
@@ -337,7 +338,7 @@ fun Map(
         }
     }
     LaunchedEffect(key1 = locationPermission.status.isGranted) {
-        if (locationPermission.status.isGranted && cameraPositionState.position.target == DEFAULT_CAMERA_LOCATION) {
+        if (locationPermission.status.isGranted && cameraPositionState.position.target == defaultCameraLocation) {
             viewModel.getCurrentLocation()
         }
         properties = properties.copy(
@@ -356,7 +357,7 @@ fun Map(
     MapView(
         onMapLoaded = {
             mapIsLoading.value = false
-            if (!locationPermission.status.isGranted){
+            if (!locationPermission.status.isGranted) {
                 if (autoTakeEvents) {
                     val bounds =
                         cameraPositionState.projection?.visibleRegion?.latLngBounds
@@ -422,7 +423,7 @@ private fun MapView(
 
 ) {
 
-    val userResource by navHostViewModel.userResourceFlow.collectAsState()
+    val userResource by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var selectionModeIsEnable by remember { mutableStateOf(false) }
     val eventBottomSheetState = rememberModalBottomSheetState()
@@ -437,7 +438,7 @@ private fun MapView(
     val selectedCategories = remember { mutableStateListOf<EventType>() }
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
-    val eventsInCamRegion by viewModel.eventsInRegion.collectAsState()
+    val eventsInCamRegion by viewModel.eventsInRegion.collectAsStateWithLifecycle()
 
     DisposableEffect(Unit) {
         onDispose {
@@ -457,7 +458,7 @@ private fun MapView(
                 update = CameraUpdateFactory.newCameraPosition(
                     CameraPosition.fromLatLngZoom(
                         locationLatLng,
-                        17f
+                        13f
                     )
                 )
             )
@@ -502,24 +503,22 @@ private fun MapView(
     }
 
     var searchBarExpanded by rememberSaveable { mutableStateOf(false) }
-    val textFieldState = rememberTextFieldState()
     LaunchedEffect(searchBarExpanded) {
         onBottomBarVisibilityChange(!searchBarExpanded)
     }
     Scaffold(
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.imePadding())
+            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.imePadding().padding(bottom = 50.dp))
         }
     ) {
         Box(
             Modifier
-                .fillMaxSize()
-                .semantics { isTraversalGroup = true }) {
+                .fillMaxSize()) {
             if (showUnverifiedAccountAlertDialog) {
                 UnverifiedAccountAlertDialog(
                     onDismiss = { showUnverifiedAccountAlertDialog = false }
                 ) {
-                    navController.navigate("menu_profile")
+                    navController.navigate(Profile)
                 }
             }
             if (showTicketSheet) {
@@ -577,7 +576,14 @@ private fun MapView(
                             val bounds =
                                 cameraPositionState.projection?.visibleRegion?.latLngBounds
                             if (bounds != null) {
-                                Log.e("map log", "startDate: ${startDate?.let { Timestamp(Date(it)) }}, endDate: ${endDate?.let { Timestamp(Date(it)) }}")
+                                Log.e(
+                                    "map log",
+                                    "startDate: ${startDate?.let { Timestamp(Date(it)) }}, endDate: ${
+                                        endDate?.let {
+                                            Timestamp(Date(it))
+                                        }
+                                    }"
+                                )
                                 viewModel.getEventsInRegion(
                                     bounds = bounds,
                                     listSize = 10,
@@ -605,7 +611,6 @@ private fun MapView(
             ) {
                 AnimatedVisibility(visible = !selectionModeIsEnable) {
                     SearchBarContent(
-                        textFieldState = textFieldState,
                         onSearch = { onSearch(it) },
                         searchBarExpanded = searchBarExpanded,
                         searchResultResource = searchResultResource,
@@ -623,17 +628,13 @@ private fun MapView(
                                     update = CameraUpdateFactory.newCameraPosition(
                                         CameraPosition.fromLatLngZoom(
                                             it,
-                                            17f
+                                            13f
                                         )
                                     )
                                 )
                             }
                         },
                         endDate = endDate,
-                        clearSearchBar = {
-                            textFieldState.clearText()
-                            viewModel.clearSearchResults()
-                        },
                         onlyPublicEvents = onlyPublicEvents
                     )
                 }
@@ -683,14 +684,19 @@ private fun MapView(
                                             duration = SnackbarDuration.Long,
                                             actionLabel = context.getString(R.string.permission_settings)
                                         )
-                                        if (SnackbarResult.ActionPerformed == result){
-                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.fromParts("package", context.packageName, null)
-                                            }
+                                        if (SnackbarResult.ActionPerformed == result) {
+                                            val intent =
+                                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                    data = Uri.fromParts(
+                                                        "package",
+                                                        context.packageName,
+                                                        null
+                                                    )
+                                                }
                                             context.startActivity(intent)
                                         }
                                     }
-                                }else {
+                                } else {
                                     locationPermission.launchPermissionRequest()
                                 }
                             }
@@ -742,14 +748,14 @@ private fun MapView(
                 EventBottomSheet(
                     onDismiss = {
                         scope.launch { eventBottomSheetState.hide() }.invokeOnCompletion {
-                            if (!eventBottomSheetState.isVisible){
+                            if (!eventBottomSheetState.isVisible) {
                                 showEventBottomSheet = null
                             }
                         }
                     },
                     sheetState = eventBottomSheetState,
                     context = LocalContext.current,
-                    onCommunityClick = { navController.navigate("community_page/$it") },
+                    onCommunityClick = { navController.navigate(CommunityPage(it)) },
                     currentUser = currentUser,
                     event = showEventBottomSheet!!,
                     navHostViewModel = navHostViewModel,
@@ -758,9 +764,9 @@ private fun MapView(
                         showUnverifiedAccountAlertDialog = true
                     },
                     navigateToEventPage = {
-                        navController.navigate("event_page/${showEventBottomSheet!!.id}")
+                        navController.navigate(EventPage(it))
                     },
-                    onLogInClick = { navController.navigate("log_in") }
+                    onLogInClick = { navController.navigate(LogIn) }
                 )
             }
 
@@ -791,7 +797,7 @@ private fun MapView(
                                     withDismissAction = true
                                 )
                                 if (result == SnackbarResult.ActionPerformed) {
-                                    navController.navigate("log_in")
+                                    navController.navigate(LogIn)
                                 }
                             }
                         }
@@ -834,12 +840,7 @@ private fun MapView(
                         } else {
                             val latitude = cameraPositionState.position.target.latitude.toString()
                             val longitude = cameraPositionState.position.target.longitude.toString()
-                            navController.navigate("create_event/$latitude/$longitude") {
-                                viewModel.createEventState.value = Resource.Idle()
-                                popUpTo(BottomNavItem.Map.route) {
-                                    saveState = true
-                                }
-                            }
+                            navController.navigate(CreateEvent(latitude, longitude))
                         }
                     }
 
@@ -890,7 +891,7 @@ private fun MapView(
             if (selectionModeIsEnable) {
                 Icon(
                     imageVector = Icons.Rounded.LocationOn,
-                    contentDescription = "",
+                    contentDescription = "my location",
                     modifier = Modifier
                         .zIndex(2f)
                         .offset(y = (-24).dp)
@@ -902,13 +903,12 @@ private fun MapView(
                 )
             }
 
-
             GoogleMap(
                 onMapLoaded = onMapLoaded,
                 modifier = Modifier.matchParentSize(),
                 cameraPositionState = cameraPositionState,
                 properties = properties,
-                uiSettings = uiSettings
+                uiSettings = uiSettings,
             ) {
 
                 eventList.forEach { event ->
@@ -917,7 +917,7 @@ private fun MapView(
                         val markerState =
                             MarkerState(position = LatLng(event.latitude, event.longitude))
                         Marker(
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET),
+                            icon = resizeBitmap(R.drawable.map_marker_high_size, LocalContext.current,144,144),
                             state = markerState,
                             title = event.title,
                             onClick = { marker ->
@@ -930,7 +930,7 @@ private fun MapView(
                                                     event.latitude,
                                                     event.longitude
                                                 ),
-                                                17f
+                                                13f
                                             )
                                         )
                                     )
@@ -944,7 +944,12 @@ private fun MapView(
             }
         }
     }
+}
 
+fun resizeBitmap(resourceId: Int, context: Context, width: Int, height: Int): BitmapDescriptor {
+    val bitmap = BitmapFactory.decodeResource(context.resources, resourceId)
+    val resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false)
+    return BitmapDescriptorFactory.fromBitmap(resizedBitmap)
 }
 
 
@@ -966,8 +971,8 @@ fun FilterDialog(
     onlyPublicEvents: Boolean,
     onPublicChange: (Boolean) -> Unit
 ) {
-    var expandCategory by remember { mutableStateOf(true) }
-    var expandDate by remember { mutableStateOf(true) }
+    var expandCategory by remember { mutableStateOf(false) }
+    var expandDate by remember { mutableStateOf(false) }
     var showDateRangePicker by remember { mutableStateOf(false) }
     val categories = Constants.EVENT_TYPES
     var numOfParticipantsRangeError by remember { mutableStateOf(false) }
@@ -1036,8 +1041,7 @@ fun FilterDialog(
                     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             Modifier
-                                .fillMaxWidth()
-                                .clickable { expandDate = !expandDate },
+                                .fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
@@ -1098,7 +1102,7 @@ fun FilterDialog(
                                         leadingIcon = {
                                             Icon(
                                                 imageVector = category.icon,
-                                                contentDescription = null
+                                                contentDescription = stringResource(category.labelResource)
                                             )
                                         },
                                         selected = selectedCategories.contains(category),
@@ -1191,7 +1195,6 @@ fun FilterDialog(
                                         )
                                     } ?: stringResource(R.string.end_date)),
                                         modifier = Modifier.padding(15.dp))
-
                                 }
                             }
 
@@ -1308,7 +1311,7 @@ private fun SearchResultRow(
         trailingContent = {
             Icon(
                 imageVector = getEventIconFromValue(event.type),
-                contentDescription = null
+                contentDescription = event.title
             )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -1318,7 +1321,6 @@ private fun SearchResultRow(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SearchBarContent(
-    textFieldState: TextFieldState,
     onSearch: (String) -> Unit,
     searchBarExpanded: Boolean,
     searchResultResource: Resource<List<Event>>,
@@ -1329,12 +1331,12 @@ private fun SearchBarContent(
     selectedCategories: List<EventType>,
     startDate: Long?,
     onlyPublicEvents: Boolean,
-    clearSearchBar: () -> Unit,
     addToEventList: (Event) -> Unit,
     showEventBottomSheet: (Event?) -> Unit,
     animateCamera: (LatLng) -> Unit,
     endDate: Long?,
 ) {
+    var query by remember { mutableStateOf("") }
     val context = LocalContext.current
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     SearchBar(
@@ -1344,11 +1346,17 @@ private fun SearchBarContent(
             .zIndex(5f),
         inputField = {
             SearchBarDefaults.InputField(
-                modifier = Modifier.width(screenWidth * 0.85f),
-                state = textFieldState,
-                onSearch = {
-                    onSearch(it)
+                modifier = Modifier
+                    .width(screenWidth * 0.85f)
+                    .zIndex(5f),
+                query = query,
+                onQueryChange = {
+                    if (it.isNotBlank()) {
+                        onSearch(it)
+                    }
+                    query = it
                 },
+                onSearch = {},
                 expanded = searchBarExpanded,
                 onExpandedChange = {
                     changeSearchBarExpanded(it)
@@ -1357,7 +1365,10 @@ private fun SearchBarContent(
                 leadingIcon = {
                     if (searchBarExpanded) {
                         IconButton(
-                            onClick = { changeSearchBarExpanded(false) }
+                            onClick = {
+                                query = ""
+                                changeSearchBarExpanded(false)
+                            }
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
@@ -1380,12 +1391,13 @@ private fun SearchBarContent(
                                 CoilImageLoader(
                                     userResource.data.profilePictureUrl!!,
                                     context,
-                                    Modifier.matchParentSize()
+                                    Modifier.matchParentSize(),
+                                    "my profile"
                                 )
                             } else {
                                 Image(
                                     imageVector = Icons.Rounded.Person,
-                                    contentDescription = "anonymous",
+                                    contentDescription = "my profile",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .matchParentSize()
@@ -1398,21 +1410,10 @@ private fun SearchBarContent(
                 },
                 trailingIcon = {
                     if (searchBarExpanded) {
-                        if (textFieldState.text.isNotEmpty()) {
-                            IconButton(onClick = {
-                                clearSearchBar()
-                            }) {
-                                Icon(
-                                    Icons.Rounded.Close,
-                                    contentDescription = "clear"
-                                )
-                            }
-                        } else {
-                            Icon(
-                                Icons.Rounded.Search,
-                                contentDescription = "search"
-                            )
-                        }
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = "search"
+                        )
 
                     } else {
                         val filteringIsEnable = selectedCategories.isNotEmpty()
@@ -1518,7 +1519,8 @@ private fun SearchBarContent(
                     Box(
                         Modifier
                             .fillMaxHeight(0.6f)
-                            .align(Alignment.CenterHorizontally)) {
+                            .align(Alignment.CenterHorizontally)
+                    ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
@@ -1576,51 +1578,47 @@ private fun MapPreview() {
             .background(Color.White),
         verticalArrangement = Arrangement.SpaceAround
     ) {
-        if (true) {
-            SearchBarContent(
-                textFieldState = TextFieldState(""),
-                onSearch = {},
-                searchBarExpanded = true,
-                searchResultResource = Resource.Success(
-                    data = listOf(
+        SearchBarContent(
+            onSearch = {},
+            searchBarExpanded = true,
+            searchResultResource = Resource.Success(
+                data = listOf(
 
-                    )
-                ),
-                changeSearchBarExpanded = {},
-                userResource = Resource.Success(data = User()),
-                showTicketDialog = {},
-                openFilterDialog = {},
-                selectedCategories = emptyList(),
-                startDate = null,
-                addToEventList = {},
-                showEventBottomSheet = {},
-                animateCamera = {},
-                endDate = null,
-                clearSearchBar = {},
-                onlyPublicEvents = true
-            )
-        } else {
-            FilterDialog(
-                onDismissRequest = {},
-                onReset = {},
-                startDate = 0,
-                endDate = 0,
-                selectedCategories = emptyList(),
-                onStartDateChange = {},
-                onEndDateChange = {},
-                onAddSelectedCategories = {},
-                onRemoveSelectedCategories = {},
-                onConfirm = {},
-                onlyPublicEvents = true,
-                onPublicChange = {}
-            )
-        }
+                )
+            ),
+            changeSearchBarExpanded = {},
+            userResource = Resource.Success(data = User()),
+            showTicketDialog = {},
+            openFilterDialog = {},
+            selectedCategories = emptyList(),
+            startDate = null,
+            addToEventList = {},
+            showEventBottomSheet = {},
+            animateCamera = {},
+            endDate = null,
+            onlyPublicEvents = true
+        )
+        /*FilterDialog(
+            onDismissRequest = {},
+            onReset = {},
+            startDate = 0,
+            endDate = 0,
+            selectedCategories = emptyList(),
+            onStartDateChange = {},
+            onEndDateChange = {},
+            onAddSelectedCategories = {},
+            onRemoveSelectedCategories = {},
+            onConfirm = {},
+            onlyPublicEvents = true,
+            onPublicChange = {}
+        )*/
+
         /*val rowHeight = 120.dp
         SearchResultRow(
             Event(
                 title = "title",
                 description = "descriptiondescriptiondescriptiondescriptiondescriptiondescription",
-                addressDescription = "addressDescriptionaddressDescriptionaddressDescriptionaddressDescription",
+                addressDescription = "",
             ),
             onItemClick = {},
             onShowOnMapClick = {}

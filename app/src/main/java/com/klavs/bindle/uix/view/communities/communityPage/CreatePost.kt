@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
@@ -142,8 +143,8 @@ fun CreatePost(
     val characterLimit = 400
     var commentsOn by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(false) }
-    val myMemberDocResource by viewModel.myMemberDocResource.collectAsState()
-    val communityResource by viewModel.community.collectAsState()
+    val myMemberDocResource by viewModel.myMemberDocResource.collectAsStateWithLifecycle()
+    val communityResource by viewModel.community.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel.createPostResource.value) {
         when (val resource = viewModel.createPostResource.value) {
@@ -222,7 +223,7 @@ fun CreatePost(
                         if (currentUser.photoUrl == null) {
                             Image(
                                 imageVector = Icons.Rounded.Person,
-                                contentDescription = "",
+                                contentDescription = currentUser.displayName,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .matchParentSize()

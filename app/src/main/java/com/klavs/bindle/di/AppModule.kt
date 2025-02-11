@@ -55,8 +55,8 @@ import com.klavs.bindle.data.repo.messaging.MessagingRepository
 import com.klavs.bindle.data.repo.messaging.MessagingRepositoryImpl
 import com.klavs.bindle.data.repo.storage.StorageRepository
 import com.klavs.bindle.data.repo.storage.StorageRepositoryImpl
-import com.klavs.bindle.util.startdestination.StartDestinationProvider
-import com.klavs.bindle.util.startdestination.StartDestinationProviderImpl
+import com.klavs.bindle.helper.startdestination.StartDestinationProvider
+import com.klavs.bindle.helper.startdestination.StartDestinationProviderImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

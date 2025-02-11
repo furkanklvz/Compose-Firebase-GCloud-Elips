@@ -22,6 +22,8 @@ import com.klavs.bindle.data.repo.location.LocationRepository
 import com.klavs.bindle.resource.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -64,6 +66,8 @@ class MapViewModel @Inject constructor(
     private val _themeState = MutableStateFlow(AppPref.DEFAULT_THEME)
     val themeState = _themeState.asStateFlow()
 
+    private var searchEventJob: Job? = null
+
 
     init {
         viewModelScope.launch {
@@ -77,14 +81,12 @@ class MapViewModel @Inject constructor(
         _eventsInRegion.value = Resource.Idle()
     }
 
-    fun clearSearchResults() {
-        _searchResults.value = Resource.Idle()
-    }
-
     fun searchEvent(searchQuery: String) {
         if (searchQuery.isNotBlank()) {
             _searchResults.value = Resource.Loading()
-            viewModelScope.launch(Dispatchers.Main) {
+            searchEventJob?.cancel()
+            searchEventJob = viewModelScope.launch(Dispatchers.Main) {
+                delay(750)
                 val result = algoliaRepo.searchEvent(
                     searchQuery = searchQuery,
                     resultSize = 7

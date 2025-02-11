@@ -54,7 +54,6 @@ class NavHostViewModel @Inject constructor(
 
     fun startToListenUserDocument(uid: String) {
         _userResourceFlow.value = Resource.Loading()
-
         listenToUserJob?.cancel()
         listenToUserJob = viewModelScope.launch(Dispatchers.Main) {
             firestoreRepo.getUserDataFlow(

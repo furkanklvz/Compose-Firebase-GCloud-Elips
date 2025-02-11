@@ -23,20 +23,20 @@ class LocationDataSourceImpl @Inject constructor(
 ) :
     LocationDataSource {
     override suspend fun getCurrentLocation(): Resource<Location> {
-        Log.e("location", "konum aranmaya başladı")
+        Log.e("locationDataSource", "konum aranmaya başladı")
         return try {
             val accuracy = Priority.PRIORITY_HIGH_ACCURACY
             @SuppressLint("MissingPermission")
             val location = locationClient.getCurrentLocation(accuracy, null).await()
             if (location != null) {
-                Log.e("location", "konum algılandı")
+                Log.e("locationDataSource", "konum algılandı")
                 Resource.Success(data = location)
             }else{
-                Log.e("location", "konum algılanamadı")
+                Log.e("locationDataSource", "konum algılanamadı")
                 Resource.Error(messageResource = R.string.location_not_detected)
             }
         } catch (e: Exception) {
-            Log.e("error from datasource", e.localizedMessage ?: "unknown error")
+            Log.e("locationDataSource", e.localizedMessage ?: "unknown error")
             crashlytics.recordException(e)
             Resource.Error(R.string.location_not_detected)
         }
@@ -52,7 +52,7 @@ class LocationDataSourceImpl @Inject constructor(
                 Resource.Error(messageResource = R.string.something_went_wrong)
             }
         } catch (e: Exception) {
-            Log.e("error from datasource", e.localizedMessage ?: "unknown error")
+            Log.e("locationDataSource", e.localizedMessage ?: "unknown error")
             crashlytics.recordException(e)
             Resource.Error(R.string.something_went_wrong)
         }

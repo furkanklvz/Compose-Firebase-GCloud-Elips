@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.ExitToApp
@@ -53,8 +52,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -80,20 +77,25 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.firebase.auth.FirebaseUser
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.community.Community
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.data.entity.community.JoinedCommunity
+import com.klavs.bindle.data.routes.CommunityPage
+import com.klavs.bindle.data.routes.CreateCommunity
+import com.klavs.bindle.data.routes.LogIn
+import com.klavs.bindle.data.routes.Profile
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.view.communities.communityPage.LeavingDialog
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.communities.CommunityViewModel
-import com.klavs.bindle.util.TicketBottomSheet
-import com.klavs.bindle.util.UnverifiedAccountAlertDialog
+import com.klavs.bindle.helper.TicketBottomSheet
+import com.klavs.bindle.helper.UnverifiedAccountAlertDialog
+import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
 import kotlinx.coroutines.launch
 
 
@@ -104,21 +106,23 @@ fun Communities(
     currentUser: FirebaseUser?,
     navHostViewModel: NavHostViewModel,
     onBottomBarVisibilityChange: (Boolean) -> Unit,
-    viewModel: CommunityViewModel
+    viewModel: CommunityViewModel,
+    postViewModel: PostViewModel
 ) {
 
     val context = LocalContext.current
     var searchText by rememberSaveable { mutableStateOf("") }
-    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
+    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
     var showTicketSheet by remember { mutableStateOf(false) }
     val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
-    val communitiesResource by viewModel.communities.collectAsState()
-    val pinnedCommunities by viewModel.pinnedCommunities.collectAsState()
-    val searchResultsResource by viewModel.searchResults.collectAsState()
+    val communitiesResource by viewModel.communities.collectAsStateWithLifecycle()
+    val pinnedCommunities by viewModel.pinnedCommunities.collectAsStateWithLifecycle()
+    val searchResultsResource by viewModel.searchResults.collectAsStateWithLifecycle()
 
 
     LaunchedEffect(true) {
+        postViewModel.resetViewModel()
         if (communitiesResource !is Resource.Success && currentUser != null) {
             viewModel.listenToCommunities(
                 myUid = currentUser.uid
@@ -132,7 +136,7 @@ fun Communities(
     }
 
     val focusRequester = remember { FocusRequester() }
-    val searchBarExpanded by navHostViewModel.communitiesSearchBarExpanded.collectAsState()
+    val searchBarExpanded by navHostViewModel.communitiesSearchBarExpanded.collectAsStateWithLifecycle()
 
     LaunchedEffect(searchBarExpanded) {
         onBottomBarVisibilityChange(!searchBarExpanded)
@@ -160,16 +164,10 @@ fun Communities(
                                 Text(stringResource(R.string.community_search_placeholder))
                             },
                             keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Search // Klavyede "Arama" ikonunu gösterir
+                                imeAction = ImeAction.Search
                             ),
                             keyboardActions = KeyboardActions(
-                                onSearch = {
-                                    if (searchText.isNotBlank()) {
-                                        viewModel.searchCommunity(
-                                            searchQuery = searchText
-                                        )
-                                    }
-                                }
+                                onSearch = {}
                             ),
                             leadingIcon = {
                                 IconButton(
@@ -187,7 +185,14 @@ fun Communities(
                                 .focusRequester(focusRequester)
                                 .fillMaxWidth(),
                             value = searchText,
-                            onValueChange = { searchText = it },
+                            onValueChange = {
+                                searchText = it
+                                if (searchText.isNotBlank()) {
+                                    viewModel.searchCommunity(
+                                        searchQuery = searchText
+                                    )
+                                }
+                            },
                             colors = TextFieldDefaults.colors(
                                 unfocusedContainerColor = Color.Transparent,
                                 focusedContainerColor = Color.Transparent
@@ -229,7 +234,7 @@ fun Communities(
                                             "communities",
                                             "navigate to create community from button"
                                         )
-                                        navController.navigate("create_community")
+                                        navController.navigate(CreateCommunity)
                                     }
                                 } else {
                                     showUnverifiedAccountAlertDialog = true
@@ -272,7 +277,7 @@ fun Communities(
                 UnverifiedAccountAlertDialog(
                     onDismiss = { showUnverifiedAccountAlertDialog = false }
                 ) {
-                    navController.navigate("menu_profile")
+                    navController.navigate(Profile)
                 }
             }
             if (showTicketSheet && currentUser != null) {
@@ -292,14 +297,13 @@ fun Communities(
             if (searchBarExpanded) {
                 SearchContent(
                     searchResultsResource = searchResultsResource,
-                    onCommunityClick = { navController.navigate("community_page/$it") }
+                    onCommunityClick = { navController.navigate(CommunityPage(it)) }
                 )
             } else {
                 if (currentUser != null) {
                     Content(
                         navigateToCommunity = {
-                            navController.navigate("community_page/$it") {
-                            }
+                            navController.navigate(CommunityPage(it))
                         },
                         communitiesResource = communitiesResource,
                         pinnedCommunities = pinnedCommunities,
@@ -317,7 +321,7 @@ fun Communities(
                             style = MaterialTheme.typography.titleMedium
                         )
                         OutlinedButton(
-                            onClick = { navController.navigate("log_in") }
+                            onClick = { navController.navigate(LogIn) }
                         ) {
                             Text(stringResource(R.string.sign_in))
                         }
@@ -450,7 +454,8 @@ private fun SearchContent(
                                             CoilImageLoader(
                                                 url = community.communityPictureUrl,
                                                 context = context,
-                                                modifier = Modifier.matchParentSize()
+                                                modifier = Modifier.matchParentSize(),
+                                                community.name
                                             )
                                         }
                                     }
@@ -463,42 +468,6 @@ private fun SearchContent(
         }
 
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CommunitySearchBar(
-    searchBarExpanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit
-) {
-    val textFieldState = rememberTextFieldState()
-
-    SearchBar(
-        colors = SearchBarDefaults.colors(
-            containerColor = Color.Transparent
-        ),
-        modifier = Modifier
-            .zIndex(5f),
-        inputField = {
-            SearchBarDefaults.InputField(
-                state = textFieldState,
-                onSearch = {
-                },
-                expanded = searchBarExpanded,
-                onExpandedChange = {
-                    onExpandedChange(it)
-                },
-                placeholder = { Text(stringResource(R.string.search_events)) },
-            )
-
-        },
-        expanded = searchBarExpanded,
-        onExpandedChange = {
-            onExpandedChange(it)
-        }
-    ) {}
-
-
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -628,14 +597,17 @@ fun CommunityRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+            ) {
                 if (community.communityPictureUrl != null) {
                     CoilImageLoader(
                         url = community.communityPictureUrl,
                         context = context,
-                        modifier = Modifier.matchParentSize()
+                        modifier = Modifier.matchParentSize(),
+                        community.name
                     )
                 } else {
                     Image(
@@ -755,15 +727,10 @@ fun getRoleNameFromRolePriority(rolePriority: Int): Int {
 @Preview(showSystemUi = true)
 @Composable
 private fun CommunitiesPreview() {
-    var searchBarExpanded by remember { mutableStateOf(false) }
+    //var searchBarExpanded by remember { mutableStateOf(false) }
     Scaffold(topBar = {
         TopAppBar(
             title = {
-                CommunitySearchBar(
-                    searchBarExpanded = searchBarExpanded
-                ) {
-                    searchBarExpanded = it
-                }
             }
         )
     }) { innerPadding ->

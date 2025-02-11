@@ -1,4 +1,4 @@
-package com.klavs.bindle.util
+package com.klavs.bindle.helper
 
 import android.content.Context
 import android.content.Intent
@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.klavs.bindle.R
@@ -104,10 +105,10 @@ fun EventBottomSheet(
 ) {
     var isLoading by remember { mutableStateOf(true) }
     var detailedEvent by remember { mutableStateOf<DetailedEvent?>(null) }
-    val requestSent by viewModel.requestSent.collectAsState()
-    val amIParticipated by viewModel.amIParticipating.collectAsState()
-    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
-    val linkedCommunitiesResource by viewModel.linkedCommunities.collectAsState()
+    val requestSent by viewModel.requestSent.collectAsStateWithLifecycle()
+    val amIParticipated by viewModel.amIParticipating.collectAsStateWithLifecycle()
+    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
+    val linkedCommunitiesResource by viewModel.linkedCommunities.collectAsStateWithLifecycle()
 
 
 
@@ -581,7 +582,7 @@ fun EventInfos(
                             contentDescription = "event address"
                         )
                     },
-                    trailingContent = if (detailedEvent.event.privateInfo) null else {
+                    trailingContent =
                         {
                             FilledTonalIconButton(
                                 onClick = {
@@ -597,7 +598,7 @@ fun EventInfos(
                                 )
                             }
                         }
-                    },
+                    ,
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
             }
@@ -652,7 +653,8 @@ fun EventInfos(
                                 CoilImageLoader(
                                     detailedEvent.owner.profilePictureUrl,
                                     LocalContext.current,
-                                    Modifier.matchParentSize()
+                                    Modifier.matchParentSize(),
+                                    contentDescription = detailedEvent.owner.userName
                                 )
                             } else {
                                 Image(
@@ -795,7 +797,8 @@ private fun LinkedCommunityList(
                                 CoilImageLoader(
                                     community.communityPictureUrl,
                                     LocalContext.current,
-                                    Modifier.matchParentSize()
+                                    Modifier.matchParentSize(),
+                                    community.name
                                 )
                             } else {
                                 Image(

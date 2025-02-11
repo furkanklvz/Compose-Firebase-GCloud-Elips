@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.NavigateNext
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -29,6 +28,10 @@ import com.google.firebase.auth.FirebaseUser
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
 import com.klavs.bindle.data.entity.sealedclasses.MenuItem
+import com.klavs.bindle.data.routes.AppSettings
+import com.klavs.bindle.data.routes.LogIn
+import com.klavs.bindle.data.routes.Profile
+import com.klavs.bindle.data.routes.SupportAndFeedback
 import com.klavs.bindle.uix.viewmodel.MenuViewModel
 
 
@@ -53,16 +56,16 @@ fun Menu(
         }
     ) { innerpadding ->
         val menuItems = listOf(
-            MenuItem.Account { navController.navigate("menu_profile") },
-            MenuItem.AppSettings { navController.navigate("app_settings") },
-            MenuItem.SupportAndFeedback { navController.navigate("support_and_feedback") },
+            MenuItem.Account { navController.navigate(Profile) },
+            MenuItem.AppSettings { navController.navigate(AppSettings) },
+            MenuItem.SupportAndFeedback { navController.navigate(SupportAndFeedback) },
             MenuItem.Auth(currentUser != null) {
                 if (currentUser != null) {
                     viewModel.signOut(
                         uid = currentUser.uid
                     )
                 } else {
-                    navController.navigate("log_in")
+                    navController.navigate(LogIn)
                 }
             }
 

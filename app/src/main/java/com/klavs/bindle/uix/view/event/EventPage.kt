@@ -109,25 +109,30 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.Event
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.sealedclasses.EventType
 import com.klavs.bindle.data.entity.RequestForEvent
 import com.klavs.bindle.data.entity.User
 import com.klavs.bindle.data.entity.community.Community
+import com.klavs.bindle.data.routes.CommunityPage
+import com.klavs.bindle.data.routes.EditEvent
+import com.klavs.bindle.data.routes.EventChat
+import com.klavs.bindle.data.routes.Profile
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
 import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
 import com.klavs.bindle.uix.viewmodel.event.EventsViewModel
-import com.klavs.bindle.util.Constants
-import com.klavs.bindle.util.TicketBottomSheet
-import com.klavs.bindle.util.UnverifiedAccountAlertDialog
+import com.klavs.bindle.helper.Constants
+import com.klavs.bindle.helper.TicketBottomSheet
+import com.klavs.bindle.helper.UnverifiedAccountAlertDialog
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -144,13 +149,13 @@ fun EventPage(
     navHostViewModel: NavHostViewModel
 ) {
     val context = LocalContext.current
-    val owner by viewModel.eventOwner.collectAsState()
+    val owner by viewModel.eventOwner.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackBarHostState = remember { SnackbarHostState() }
-    val eventResource by viewModel.event.collectAsState()
-    val countTheParticipants by viewModel.countTheParticipants.collectAsState()
-    val numberOfRequests by viewModel.numberOfRequests.collectAsState()
-    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
+    val eventResource by viewModel.event.collectAsStateWithLifecycle()
+    val countTheParticipants by viewModel.countTheParticipants.collectAsStateWithLifecycle()
+    val numberOfRequests by viewModel.numberOfRequests.collectAsStateWithLifecycle()
+    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
     val requestsMBSState = rememberModalBottomSheetState()
     var showRequests by remember { mutableStateOf(false) }
     var showCancelAlertDialog by remember { mutableStateOf(false) }
@@ -158,15 +163,15 @@ fun EventPage(
     val participantsMBSState = rememberModalBottomSheetState()
     var showParticipants by remember { mutableStateOf(false) }
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
-    val requestsResource by viewModel.requests.collectAsState()
-    val lastRequestDoc by viewModel.lastRequestDoc.collectAsState()
-    val acceptResource by viewModel.acceptResource.collectAsState()
-    val rejectResource by viewModel.rejectResource.collectAsState()
-    val participantsResource by viewModel.participants.collectAsState()
-    val lastParticipantDoc by viewModel.lastParticipantDoc.collectAsState()
-    val removeParticipantsResource by viewModel.removeParticipantResource.collectAsState()
-    val communities by viewModel.linkedCommunities.collectAsState()
-    val leaveTheEventResource by viewModel.leaveEventResourceFlow.collectAsState()
+    val requestsResource by viewModel.requests.collectAsStateWithLifecycle()
+    val lastRequestDoc by viewModel.lastRequestDoc.collectAsStateWithLifecycle()
+    val acceptResource by viewModel.acceptResource.collectAsStateWithLifecycle()
+    val rejectResource by viewModel.rejectResource.collectAsStateWithLifecycle()
+    val participantsResource by viewModel.participants.collectAsStateWithLifecycle()
+    val lastParticipantDoc by viewModel.lastParticipantDoc.collectAsStateWithLifecycle()
+    val removeParticipantsResource by viewModel.removeParticipantResource.collectAsStateWithLifecycle()
+    val communities by viewModel.linkedCommunities.collectAsStateWithLifecycle()
+    val leaveTheEventResource by viewModel.leaveEventResourceFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(leaveTheEventResource) {
         if (leaveTheEventResource is Resource.Success) {
@@ -196,7 +201,7 @@ fun EventPage(
     }
     EventPageContent(
         eventResource = eventResource,
-        navigateToEventPage = { navController.navigate("event_chat/${eventId}/${countTheParticipants ?: -1}") },
+        navigateToEventPage = { navController.navigate(EventChat(eventId, countTheParticipants ?: -1)) },
         currentUserUid = currentUser.uid,
         numberOfRequests = numberOfRequests,
         showRequests = {
@@ -210,7 +215,7 @@ fun EventPage(
 
             val eventJson = Gson().toJson(eventResource.data)
             val encodedJsonEvent = Uri.encode(eventJson)
-            navController.navigate("edit_event/$encodedJsonEvent")
+            navController.navigate(EditEvent(encodedJsonEvent))
 
         },
         changeCancelAlertDialog = { showCancelAlertDialog = it },
@@ -227,7 +232,7 @@ fun EventPage(
         cancelAlertDialogIsShown = showCancelAlertDialog,
         showUnverifiedAccountAlertDialog = { showUnverifiedAccountAlertDialog = it },
         unverifiedAccountDialogIsShown = showUnverifiedAccountAlertDialog,
-        navigateToProfile = { navController.navigate("menu_profile") },
+        navigateToProfile = { navController.navigate(Profile) },
         participantsIsShown = showParticipants,
         showParticipants = {
             if (it) {
@@ -311,7 +316,7 @@ fun EventPage(
                 eventResource.data?.linkedCommunities ?: emptyList()
             )
         },
-        navigateToCommunityPage = { navController.navigate("community_page/$it") },
+        navigateToCommunityPage = { navController.navigate(CommunityPage(it)) },
         thereIsLastParticipantDoc = lastParticipantDoc != null,
         thereIsLastRequestDoc = lastRequestDoc != null,
         leaveAlertDialogIsShown = showLeaveAlertDialog,
@@ -866,7 +871,8 @@ private fun EventPageContent(
                                         CoilImageLoader(
                                             owner.data.profilePictureUrl,
                                             context = context,
-                                            modifier = Modifier.matchParentSize()
+                                            modifier = Modifier.matchParentSize(),
+                                            owner.data.userName
                                         )
                                     } else {
                                         Image(
@@ -1005,7 +1011,8 @@ private fun EventPageContent(
                                                                     CoilImageLoader(
                                                                         community.communityPictureUrl,
                                                                         context = context,
-                                                                        modifier = Modifier.matchParentSize()
+                                                                        modifier = Modifier.matchParentSize(),
+                                                                        community.name
                                                                     )
                                                                 } else {
                                                                     Image(
@@ -1292,7 +1299,8 @@ private fun ParticipantRow(
                     CoilImageLoader(
                         url = participant.profilePictureUrl,
                         context = context,
-                        modifier = Modifier.matchParentSize()
+                        modifier = Modifier.matchParentSize(),
+                        participant.userName
                     )
                 } else {
                     Image(
@@ -1548,7 +1556,8 @@ private fun RequestRow(
                     CoilImageLoader(
                         url = request.photoUrl,
                         context = context,
-                        modifier = Modifier.matchParentSize()
+                        modifier = Modifier.matchParentSize(),
+                        request.userName?:"request sender"
                     )
                 } else {
                     Image(

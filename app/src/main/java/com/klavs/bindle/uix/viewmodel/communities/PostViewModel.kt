@@ -55,9 +55,13 @@ class PostViewModel @Inject constructor(
 
 
     var listenToPostJob: Job? = null
+    var getPostsJob: Job? = null
+    var getCommentsJob: Job? = null
 
     fun resetViewModel(){
         listenToPostJob?.cancel()
+        getPostsJob?.cancel()
+        getCommentsJob?.cancel()
         listenToPostJob = null
         _pagedComments.value = Resource.Idle()
         pagedPostsState.value = Resource.Idle()
@@ -220,6 +224,14 @@ class PostViewModel @Inject constructor(
                         isMyComment = true
                     )
                     commentOnState.value = Resource.Success(data = commentedPost)
+                    if (commentOnState.value is Resource.Success){
+                        val post = postList.find { it.id == postId }
+                        if (post?.numOfComments != null) {
+                            val index = postList.indexOf(post)
+                            postList[index] =
+                                postList[index].copy(numOfComments = post.numOfComments!! + 1)
+                        }
+                    }
                 }
 
                 else -> {}
@@ -294,6 +306,14 @@ class PostViewModel @Inject constructor(
             deleteCommentState.value = firestoreRepo.deleteDocument(
                 documentRef = commentRef
             )
+            if (deleteCommentState.value is Resource.Success){
+                val post = postList.find { it.id == postId }
+                if (post?.numOfComments != null) {
+                    val index = postList.indexOf(post)
+                    postList[index] =
+                        postList[index].copy(numOfComments = post.numOfComments!!.minus(1))
+                }
+            }
         }
     }
 
@@ -340,7 +360,8 @@ class PostViewModel @Inject constructor(
 
     fun getPostsWithPaging(communityId: String, pageSize: Int, myUid: String) {
         pagedPostsState.value = Resource.Loading()
-        viewModelScope.launch(Dispatchers.Main) {
+        getPostsJob?.cancel()
+        getPostsJob = viewModelScope.launch(Dispatchers.Main) {
             val postsRef =
                 db.collection("communities").document(communityId).collection("posts")
                     .orderBy("date", Query.Direction.DESCENDING)
@@ -443,7 +464,8 @@ class PostViewModel @Inject constructor(
     fun getCommentsWithPaging(communityId: String, postId: String, pageSize: Int, myUid: String) {
         Log.d("communityPage", "getCommentsWithPaging called")
         _pagedComments.value = Resource.Loading()
-        viewModelScope.launch {
+        getCommentsJob?.cancel()
+        getCommentsJob = viewModelScope.launch {
             val commentsRef =
                 db.collection("communities").document(communityId).collection("posts")
                     .document(postId).collection("comments")

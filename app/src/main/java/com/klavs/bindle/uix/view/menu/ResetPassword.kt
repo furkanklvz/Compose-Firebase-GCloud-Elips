@@ -68,9 +68,6 @@ fun ResetPassword(
     val forgotPasswordDialogIsEnable = remember {
         mutableStateOf(false)
     }
-    val currentPasswordIsWrong = remember {
-        mutableStateOf(false)
-    }
     val emailSent = remember {
         mutableStateOf(false)
     }

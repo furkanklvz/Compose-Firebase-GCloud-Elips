@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -26,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -43,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
@@ -59,7 +58,7 @@ fun SupportAndFeedbackPage(
     viewmodel: SupportAndFeedbackViewmodel
 ) {
 
-    val sendingResource by viewmodel.sendingResource.collectAsState()
+    val sendingResource by viewmodel.sendingResource.collectAsStateWithLifecycle()
 
     SupportAndFeedbackContent(
         onBackClick = { navController.popBackStack() },

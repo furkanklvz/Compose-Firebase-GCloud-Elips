@@ -51,13 +51,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.firebase.Timestamp
 import com.klavs.bindle.R
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.sealedclasses.EventType
+import com.klavs.bindle.data.routes.EventPage
+import com.klavs.bindle.data.routes.LogIn
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
@@ -68,15 +71,14 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun Events(navController: NavHostController,
            myUid: String?,
            navHostViewModel: NavHostViewModel,
            viewModel: EventsViewModel) {
-    val upcomingEventsResource by navHostViewModel.upcomingEvents.collectAsState()
-    val pastEventsResource by viewModel.pastEvents.collectAsState()
+    val upcomingEventsResource by navHostViewModel.upcomingEvents.collectAsStateWithLifecycle()
+    val pastEventsResource by viewModel.pastEvents.collectAsStateWithLifecycle()
     val pastEvents = remember { mutableStateListOf<Event>() }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -103,8 +105,8 @@ fun Events(navController: NavHostController,
     EventsContent(
         snackbarHostState = snackbarHostState,
         myUid = myUid,
-        navigateToSignIn = {navController.navigate("log_in")},
-        navigateToEventPage = {navController.navigate("event_page/$it")},
+        navigateToSignIn = {navController.navigate(LogIn)},
+        navigateToEventPage = {navController.navigate(EventPage(it))},
         pastEventsResource = pastEventsResource,
         upcomingEventsResource = upcomingEventsResource,
         pastEvents = pastEvents,
@@ -307,7 +309,7 @@ private fun PastEvents(
     } else {
         LazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             items(pastEvents) { event ->
-                PastEventRow(myUid = myUid, event = event, onClick = { onEventClick(event.id!!) })
+                PastEventRow(myUid = myUid, event = event, onClick = { onEventClick(event.id) })
                 if (event != pastEvents.last()) {
                     HorizontalDivider()
                 }
@@ -357,7 +359,7 @@ private fun UpcomingEvents(
             items(eventList) { event ->
                 UpcomingEventRow(
                     event = event, onClick = {
-                        navigateToEventPage(event.id!!)
+                        navigateToEventPage(event.id)
                     },
                     myUid = myUid
                 )

@@ -14,30 +14,32 @@ import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import com.klavs.bindle.R
+import com.klavs.bindle.data.routes.CommunitiesGraph
+import com.klavs.bindle.data.routes.MapGraph
 
 sealed class BottomNavItem(
-    val route: String,
+    val route: Any,
     val unselectedIcon: @Composable () -> Unit,
     val selectedIcon: @Composable () -> Unit,
 
     val labelResource: Int
 ) {
     data object Home : BottomNavItem(
-        "home",
-        { Icon(imageVector = Icons.Outlined.Home, contentDescription = "home",) },
-        { Icon(imageVector = Icons.Rounded.Home, contentDescription = "home",) },
+        com.klavs.bindle.data.routes.Home,
+        { Icon(imageVector = Icons.Outlined.Home, contentDescription = "home") },
+        { Icon(imageVector = Icons.Rounded.Home, contentDescription = "home") },
         R.string.home
     )
 
     data object Communities : BottomNavItem(
-        "communities",
-        { Icon(imageVector = Icons.Outlined.Groups, contentDescription = "communities",) },
-        { Icon(imageVector = Icons.Rounded.Groups, contentDescription = "communities",) },
+        CommunitiesGraph,
+        { Icon(imageVector = Icons.Outlined.Groups, contentDescription = "communities") },
+        { Icon(imageVector = Icons.Rounded.Groups, contentDescription = "communities") },
         R.string.communities
     )
 
     data object Map : BottomNavItem(
-        "map",
+        MapGraph,
         {
             Icon(
                 imageVector = Icons.Outlined.Map,
@@ -56,7 +58,7 @@ sealed class BottomNavItem(
     )
 
     data object Events : BottomNavItem(
-        "events",
+        com.klavs.bindle.data.routes.Events,
         {
             Icon(
                 imageVector = Icons.Outlined.Celebration,
@@ -73,7 +75,7 @@ sealed class BottomNavItem(
     )
 
     data object Menu : BottomNavItem(
-        "menu",
+        com.klavs.bindle.data.routes.Menu,
         { Icon(imageVector = Icons.Rounded.Menu, contentDescription = "menu") },
         { Icon(imageVector = Icons.Rounded.Menu, contentDescription = "menu") },
         R.string.menu

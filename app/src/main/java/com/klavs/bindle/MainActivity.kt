@@ -43,7 +43,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,21 +62,52 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
+import androidx.navigation.toRoute
 import com.google.firebase.auth.FirebaseUser
 import com.google.gson.Gson
 import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
 import com.klavs.bindle.data.entity.Event
+import com.klavs.bindle.data.routes.AppSettings
+import com.klavs.bindle.data.routes.Communities
+import com.klavs.bindle.data.routes.CommunityEvents
+import com.klavs.bindle.data.routes.CommunityPage
+import com.klavs.bindle.data.routes.CommunitiesGraph
+import com.klavs.bindle.data.routes.CreateCommunity
+import com.klavs.bindle.data.routes.CreateEvent
+import com.klavs.bindle.data.routes.CreatePost
+import com.klavs.bindle.data.routes.CreateUser
+import com.klavs.bindle.data.routes.CreateUserPhaseTwo
+import com.klavs.bindle.data.routes.EditEvent
+import com.klavs.bindle.data.routes.EventChat
+import com.klavs.bindle.data.routes.EventPage
+import com.klavs.bindle.data.routes.Events
+import com.klavs.bindle.data.routes.Greeting
+import com.klavs.bindle.data.routes.Home
+import com.klavs.bindle.data.routes.Language
+import com.klavs.bindle.data.routes.LogIn
+import com.klavs.bindle.data.routes.Map
+import com.klavs.bindle.data.routes.MapGraph
+import com.klavs.bindle.data.routes.Menu
+import com.klavs.bindle.data.routes.Post
+import com.klavs.bindle.data.routes.Profile
+import com.klavs.bindle.data.routes.ResetEmail
+import com.klavs.bindle.data.routes.ResetPassword
+import com.klavs.bindle.data.routes.SupportAndFeedback
+import com.klavs.bindle.data.routes.Theme
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.BindleTheme
 import com.klavs.bindle.uix.view.event.Events
@@ -118,7 +148,7 @@ import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
 import com.klavs.bindle.uix.viewmodel.event.EditEventViewModel
 import com.klavs.bindle.uix.viewmodel.event.EventChatViewModel
 import com.klavs.bindle.uix.viewmodel.event.EventsViewModel
-import com.klavs.bindle.util.startdestination.StartDestinationProvider
+import com.klavs.bindle.helper.startdestination.StartDestinationProvider
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -148,7 +178,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun NavHostWithBottomNavigation(
-    startRoute: String? = null
+    startRoute: Any? = null
 ) {
     var privacyPolicyExpanded by remember { mutableStateOf(false) }
     var termsOfServiceExpanded by remember { mutableStateOf(false) }
@@ -158,9 +188,9 @@ private fun NavHostWithBottomNavigation(
     var successfullyPurchasedProduct by remember { mutableStateOf<String?>(null) }
     var startRouteState by remember { mutableStateOf(startRoute) }
     val navHostViewModel: NavHostViewModel = hiltViewModel()
-    val currentUser by navHostViewModel.currentUser.collectAsState()
-    val userResource by navHostViewModel.userResourceFlow.collectAsState()
-    val purchaseResource by navHostViewModel.purchase.collectAsState()
+    val currentUser by navHostViewModel.currentUser.collectAsStateWithLifecycle()
+    val userResource by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
+    val purchaseResource by navHostViewModel.purchase.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var launched by rememberSaveable { mutableStateOf(false) }
     val navController = rememberNavController()
@@ -226,7 +256,7 @@ private fun NavHostWithBottomNavigation(
             AlertDialog(
                 modifier = Modifier.zIndex(3f),
                 icon = {
-                    Icon(imageVector = Icons.Rounded.PrivacyTip, contentDescription = "")
+                    Icon(imageVector = Icons.Rounded.PrivacyTip, contentDescription = "Terms of Services")
                 },
                 onDismissRequest = { termsOfServiceExpanded = false },
                 dismissButton = {
@@ -424,7 +454,7 @@ private fun NavHostWithBottomNavigation(
                 fadeOut(animationSpec = tween(200))
             }
         ) {
-            composable(BottomNavItem.Home.route) {
+            composable<Home> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = true
                     startRouteState?.let {
@@ -440,60 +470,37 @@ private fun NavHostWithBottomNavigation(
                     homeViewModel = homeViewModel
                 )
             }
-            composable(
-                BottomNavItem.Communities.route
-            ) { backStackEntry ->
-                val viewModel = hiltViewModel<CommunityViewModel>(backStackEntry)
-                Communities(
-                    navController = navController,
-                    currentUser = currentUser,
-                    navHostViewModel = navHostViewModel,
-                    onBottomBarVisibilityChange = { enable ->
-                        bottomBarIsEnable = enable
-                        Log.e("communities", "bottom bar: $enable")
-                    },
-                    viewModel = viewModel
-                )
-            }
-            navigation(startDestination = BottomNavItem.Map.route, route = "map_graph") {
-                composable(BottomNavItem.Map.route) { navBackStackEntry ->
-                    val parentEntry: NavBackStackEntry = remember(navBackStackEntry) {
-                        navController.getBackStackEntry("map_graph")
-                    }
-                    val mapViewModel = hiltViewModel<MapViewModel>(parentEntry)
+            navigation<MapGraph>(startDestination = Map) {
+                composable<Map> { backStackEntry ->
+                    val mapViewModel =
+                        backStackEntry.sharedViewModel<MapViewModel>(navController)
                     Map(
-                        navController = navController, viewModel = mapViewModel,
+                        navController = navController,
+                        viewModel = mapViewModel,
                         onBottomBarVisibilityChange = { bottomBarIsEnable = it },
                         currentUser = currentUser,
                         navHostViewModel = navHostViewModel
                     )
                 }
-                composable("create_event/{latitude}/{longitude}",
-                    arguments = listOf(navArgument("latitude") { type = NavType.StringType },
-                        navArgument("longitude") { type = NavType.StringType }
-                    )
-                ) { navBackStackEntry ->
-                    if (currentUser != null) {
-                        val parentEntry: NavBackStackEntry = remember(navBackStackEntry) {
-                            navController.getBackStackEntry("map_graph")
-                        }
-                        val mapViewModel = hiltViewModel<MapViewModel>(parentEntry)
-                        LaunchedEffect(true) {
-                            bottomBarIsEnable = false
-                        }
-                        CreateEvent(
-                            navController = navController,
-                            viewModel = mapViewModel,
-                            latitude = navBackStackEntry.arguments?.getString("latitude")!!,
-                            longitude = navBackStackEntry.arguments?.getString("longitude")!!,
-                            myUid = currentUser!!.uid,
-                            navHostViewModel = navHostViewModel
-                        )
+                composable<CreateEvent> { backStackEntry ->
+                    val mapViewModel = backStackEntry.sharedViewModel<MapViewModel>(navController)
+                    LaunchedEffect(true) {
+                        bottomBarIsEnable = false
                     }
+                    val createEvent: CreateEvent = backStackEntry.toRoute()
+                    CreateEvent(
+                        navController = navController,
+                        viewModel = mapViewModel,
+                        latitude = createEvent.latitude,
+                        longitude = createEvent.longitude,
+                        myUid = currentUser!!.uid,
+                        navHostViewModel = navHostViewModel
+                    )
+
                 }
             }
 
-            composable(BottomNavItem.Events.route) {
+            composable<Events> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = true
                 }
@@ -506,7 +513,7 @@ private fun NavHostWithBottomNavigation(
                 )
 
             }
-            composable(BottomNavItem.Menu.route) {
+            composable<Menu> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = true
                 }
@@ -515,7 +522,7 @@ private fun NavHostWithBottomNavigation(
                     currentUser = currentUser
                 )
             }
-            composable("log_in") {
+            composable<LogIn> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = false
                 }
@@ -525,10 +532,10 @@ private fun NavHostWithBottomNavigation(
                     viewModel = viewModel
                 )
             }
-            composable("create_user") {
+            composable<CreateUser> {
                 CreateAccount(navController = navController)
             }
-            composable("greeting") {
+            composable<Greeting> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = false
                 }
@@ -536,22 +543,20 @@ private fun NavHostWithBottomNavigation(
                     navController = navController
                 )
             }
-            composable(
-                "create_user_phase_three/{profilePictureUri}/{userName}/{email}",
-                arguments = listOf(navArgument("profilePictureUri") { type = NavType.StringType },
-                    navArgument("userName") { type = NavType.StringType },
-                    navArgument("email") { type = NavType.StringType }
-                )) {
-                val decodedEmail = Uri.decode(it.arguments?.getString("email")!!)
-                val decodedUserName = Uri.decode(it.arguments?.getString("userName")!!)
+            composable<CreateUserPhaseTwo> { backStackEntry ->
+                val createUserPhaseTwo: CreateUserPhaseTwo = backStackEntry.toRoute()
+                val encodedEmail = createUserPhaseTwo.email
+                val encodedUsername = createUserPhaseTwo.username
+                val decodedEmail = Uri.decode(encodedEmail)
+                val decodedUserName = Uri.decode(encodedUsername)
                 CreateUserSetPassword(
                     navController = navController,
-                    profilePictureUri = it.arguments?.getString("profilePictureUri") ?: "default",
+                    profilePictureUri = createUserPhaseTwo.profilePictureUri,
                     userName = decodedUserName,
                     email = decodedEmail
                 )
             }
-            composable("menu_profile") {
+            composable<Profile> {
                 val viewModel = hiltViewModel<ProfileViewModel>(it)
                 LaunchedEffect(true) {
                     bottomBarIsEnable = false
@@ -562,7 +567,7 @@ private fun NavHostWithBottomNavigation(
                     navHostViewModel = navHostViewModel
                 )
             }
-            composable("reset_password") {
+            composable<ResetPassword> {
                 if (currentUser != null) {
                     val viewModel = hiltViewModel<ProfileViewModel>(it)
                     ResetPassword(
@@ -573,27 +578,26 @@ private fun NavHostWithBottomNavigation(
                 }
 
             }
-            composable("reset_email") {
+            composable<ResetEmail> {
                 val viewModel = hiltViewModel<ProfileViewModel>(it)
                 ResetEmail(
                     navController = navController,
-                    myUid = currentUser?.uid,
                     viewModel = viewModel
                 )
             }
-            composable("app_settings") {
+            composable<AppSettings> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = false
                 }
                 AppSettings(navController = navController)
             }
-            composable("theme") {
+            composable<Theme> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = false
                 }
                 ThemeSettings(navController = navController)
             }
-            composable("language") {
+            composable<Language> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = false
                 }
@@ -601,7 +605,7 @@ private fun NavHostWithBottomNavigation(
                     navController = navController
                 )
             }
-            composable("support_and_feedback") {
+            composable<SupportAndFeedback> {
                 LaunchedEffect(true) {
                     bottomBarIsEnable = false
                 }
@@ -612,7 +616,7 @@ private fun NavHostWithBottomNavigation(
                     viewmodel = viewModel
                 )
             }
-            composable("create_community") {
+            composable<CreateCommunity> {
                 if (currentUser != null) {
                     LaunchedEffect(true) {
                         bottomBarIsEnable = false
@@ -627,11 +631,7 @@ private fun NavHostWithBottomNavigation(
                 }
             }
 
-            composable(
-                "event_chat/{eventId}/{numOfParticipants}",
-                arguments = listOf(navArgument("eventId") { type = NavType.StringType },
-                    navArgument("numOfParticipants") { type = NavType.IntType }
-                ),
+            composable<EventChat>(
                 deepLinks = listOf(navDeepLink {
                     uriPattern = "bindle://event_chat/{eventId}/{numOfParticipants}"
                 })
@@ -640,23 +640,19 @@ private fun NavHostWithBottomNavigation(
                     LaunchedEffect(true) {
                         bottomBarIsEnable = false
                     }
+                    val eventChat: EventChat = navBackStackEntry.toRoute()
                     val viewModel = hiltViewModel<EventChatViewModel>(navBackStackEntry)
                     EventChat(
                         navController = navController,
-                        eventId = navBackStackEntry.arguments?.getString("eventId")!!,
-                        numOfParticipants = navBackStackEntry.arguments?.getInt("numOfParticipants")
-                            ?: -1,
+                        eventId = eventChat.eventId,
+                        numOfParticipants = eventChat.numParticipants,
                         currentUser = currentUser!!,
                         chatViewModel = viewModel
                     )
                 }
             }
 
-            composable(
-                route = "event_page/{eventId}",
-                arguments = listOf(navArgument("eventId") {
-                    type = NavType.StringType
-                }),
+            composable<EventPage>(
                 deepLinks = listOf(navDeepLink { uriPattern = "bindle://event_page/{eventId}" })
             ) { navBackStackEntry ->
                 if (currentUser != null) {
@@ -664,52 +660,58 @@ private fun NavHostWithBottomNavigation(
                         bottomBarIsEnable = false
                     }
                     val viewModel = hiltViewModel<EventsViewModel>(navBackStackEntry)
+                    val eventPage: EventPage = navBackStackEntry.toRoute()
                     EventPage(
                         navController = navController,
-                        eventId = navBackStackEntry.arguments?.getString("eventId")!!,
+                        eventId = eventPage.eventId,
                         currentUser = currentUser!!,
                         navHostViewModel = navHostViewModel,
                         viewModel = viewModel
                     )
                 }
             }
-            composable(
-                "post/{communityId}/{postId}",
-                arguments = listOf(
-                    navArgument("communityId") { type = NavType.StringType },
-                    navArgument("postId") { type = NavType.StringType }),
+            composable<Post>(
                 deepLinks = listOf(navDeepLink {
                     uriPattern = "bindle://post/{communityId}/{postId}"
                 })
             ) { backStackEntry ->
-                val postId = backStackEntry.arguments?.getString("postId")
-                val communityId = backStackEntry.arguments?.getString("communityId")
-                if (currentUser != null && postId != null && communityId != null) {
-                    LaunchedEffect(true) {
-                        bottomBarIsEnable = false
-                    }
-                    val postViewModel = hiltViewModel<PostViewModel>(backStackEntry)
-                    val communityPageViewModel =
-                        hiltViewModel<CommunityPageViewModel>()
-                    Post(
-                        navController = navController,
-                        postId = postId,
-                        viewModel = postViewModel,
-                        communityId = communityId,
-                        currentUser = currentUser!!,
-                        communityPageViewmModel = communityPageViewModel
-                    )
+                LaunchedEffect(true) {
+                    bottomBarIsEnable = false
                 }
+                val postViewModel = hiltViewModel<PostViewModel>(backStackEntry)
+                val communityPageViewModel =
+                    hiltViewModel<CommunityPageViewModel>()
+                val post: Post = backStackEntry.toRoute()
+                Post(
+                    navController = navController,
+                    postId = post.postId,
+                    viewModel = postViewModel,
+                    communityId = post.communityId,
+                    currentUser = currentUser!!,
+                    communityPageViewModel = communityPageViewModel
+                )
+
             }
 
-            navigation(
-                startDestination = "community_page/{communityId}",
-                route = "community_page_graph"
+            navigation<CommunitiesGraph>(
+                startDestination = Communities
             ) {
-                composable(
-                    "community_page/{communityId}",
-                    arguments = listOf(
-                        navArgument("communityId") { type = NavType.StringType }),
+                composable<Communities> { backStackEntry ->
+                    val viewModel = hiltViewModel<CommunityViewModel>(backStackEntry)
+                    val postViewModel = backStackEntry.sharedViewModel<PostViewModel>(navController)
+                    Communities(
+                        navController = navController,
+                        currentUser = currentUser,
+                        navHostViewModel = navHostViewModel,
+                        onBottomBarVisibilityChange = { enable ->
+                            bottomBarIsEnable = enable
+                            Log.e("communities", "bottom bar: $enable")
+                        },
+                        viewModel = viewModel,
+                        postViewModel = postViewModel
+                    )
+                }
+                composable<CommunityPage>(
                     deepLinks = listOf(navDeepLink {
                         uriPattern = "bindle://community_page/{communityId}"
                     })
@@ -717,61 +719,49 @@ private fun NavHostWithBottomNavigation(
                     LaunchedEffect(true) {
                         bottomBarIsEnable = false
                     }
-
-                    val parentEntry: NavBackStackEntry = remember(backStackEntry) {
-                        navController.getBackStackEntry("community_page_graph")
-                    }
-                    val postViewModel = hiltViewModel<PostViewModel>(parentEntry)
-                    val communityPageViewModel = hiltViewModel<CommunityPageViewModel>(parentEntry)
+                    val postViewModel = backStackEntry.sharedViewModel<PostViewModel>(navController)
+                    val communityPageViewModel =
+                        backStackEntry.sharedViewModel<CommunityPageViewModel>(navController)
+                    val communityPage: CommunityPage = backStackEntry.toRoute()
                     CommunityPage(
                         navController = navController,
                         vmPost = postViewModel,
-                        communityId = backStackEntry.arguments?.getString("communityId")!!,
+                        communityId = communityPage.communityId,
                         currentUser = currentUser,
                         viewModel = communityPageViewModel,
                         navHostViewModel = navHostViewModel
                     )
 
                 }
-                composable(
-                    "createPost/{communityId}",
-                    arguments = listOf(navArgument("communityId") { type = NavType.StringType })
-                ) { backStackEntry ->
+                composable<CreatePost> { backStackEntry ->
                     if (currentUser != null) {
-                        val parentEntry: NavBackStackEntry = remember(backStackEntry) {
-                            navController.getBackStackEntry("community_page_graph")
-                        }
                         val communityPageViewModel =
-                            hiltViewModel<CommunityPageViewModel>(parentEntry)
+                            backStackEntry.sharedViewModel<CommunityPageViewModel>(navController)
                         LaunchedEffect(true) {
                             bottomBarIsEnable = false
                         }
+                        val createPost: CreatePost = backStackEntry.toRoute()
                         CreatePost(
                             navController = navController,
-                            communityId = backStackEntry.arguments?.getString("communityId")!!,
+                            communityId = createPost.communityId,
                             currentUser = currentUser!!,
                             viewModel = communityPageViewModel
                         )
                     }
                 }
-                composable("community_events_list_page/{communityId}/{communityName}",
-                    arguments = listOf(navArgument("communityId") { type = NavType.StringType },
-                        navArgument("communityName") { type = NavType.StringType }
-                    )
-                ) { navBackStackEntry ->
+                composable<CommunityEvents> { backStackEntry ->
                     if (currentUser != null) {
-                        val parentEntry: NavBackStackEntry = remember(navBackStackEntry) {
-                            navController.getBackStackEntry("community_page_graph")
-                        }
+
                         val communityPageViewModel =
-                            hiltViewModel<CommunityPageViewModel>(parentEntry)
+                            backStackEntry.sharedViewModel<CommunityPageViewModel>(navController)
                         val eventListViewModel =
-                            hiltViewModel<CommunityEventListViewModel>(navBackStackEntry)
+                            hiltViewModel<CommunityEventListViewModel>(backStackEntry)
+                        val communityEvents: CommunityEvents = backStackEntry.toRoute()
                         val decodedCommunityName =
-                            Uri.decode(navBackStackEntry.arguments?.getString("communityName")!!)
+                            Uri.decode(communityEvents.communityName)
                         ActiveEventsListPage(
                             navController = navController,
-                            communityId = navBackStackEntry.arguments?.getString("communityId")!!,
+                            communityId = communityEvents.communityId,
                             communityName = decodedCommunityName,
                             currentUser = currentUser!!,
                             navHostViewModel = navHostViewModel,
@@ -785,14 +775,12 @@ private fun NavHostWithBottomNavigation(
 
 
 
-            composable(
-                "edit_event/{event}",
-                arguments = listOf(navArgument("event") { type = NavType.StringType })
-            ) {
+            composable<EditEvent> { backStackEntry ->
                 if (currentUser != null) {
-                    val decodedEventJson = Uri.decode(it.arguments?.getString("event")!!)
+                    val editEvent: EditEvent = backStackEntry.toRoute()
+                    val decodedEventJson = Uri.decode(editEvent.event)
                     val event = Gson().fromJson(decodedEventJson, Event::class.java)
-                    val viewModel = hiltViewModel<EditEventViewModel>(it)
+                    val viewModel = hiltViewModel<EditEventViewModel>(backStackEntry)
                     EditEvent(
                         navController = navController,
                         myUid = currentUser!!.uid,
@@ -807,6 +795,15 @@ private fun NavHostWithBottomNavigation(
     }
 }
 
+@Composable
+private inline fun <reified T : ViewModel> NavBackStackEntry.sharedViewModel(navController: NavController): T {
+    val navGraphRoute = destination.parent?.route ?: return hiltViewModel()
+    val parentEntry = remember(this) {
+        navController.getBackStackEntry(navGraphRoute)
+    }
+    return hiltViewModel(parentEntry)
+}
+
 @SuppressLint("SuspiciousIndentation")
 @Composable
 private fun BottomNavigationBar(navController: NavHostController, currentUser: FirebaseUser?) {
@@ -819,31 +816,22 @@ private fun BottomNavigationBar(navController: NavHostController, currentUser: F
     )
 
     NavigationBar {
-        val navBackStackEntry = navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry.value?.destination?.route
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
         bottomNavItems.forEach { bottomBarItem ->
-            val selected = currentRoute?.split("/")?.first() == bottomBarItem.route
-            Log.d("bottombar", "currentRoute: $currentRoute")
-            Log.d("bottombar", "bottomBarItem.route: ${bottomBarItem.route}")
+            val selected =
+                currentDestination?.hierarchy?.any { it.hasRoute(bottomBarItem.route::class) } == true
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    if (bottomBarItem.route != "map" || !selected) {
-                        navController.navigate(
-                            when (bottomBarItem) {
-                                BottomNavItem.Map -> "map_graph"
-                                else -> bottomBarItem.route
-                            }
-                        ) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            // Avoid multiple copies of the same destination when
-                            // reselecting the same item
-                            launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
-                            restoreState = true
+                    navController.navigate(
+                        bottomBarItem.route
+                    ) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
                         }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 },
                 icon = if (bottomBarItem is BottomNavItem.Menu) {

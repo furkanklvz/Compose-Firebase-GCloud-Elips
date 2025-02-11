@@ -91,6 +91,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -106,16 +107,20 @@ import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.User
 import com.klavs.bindle.data.entity.sealedclasses.EventType
 import com.klavs.bindle.data.entity.community.Community
+import com.klavs.bindle.data.routes.CommunityPage
+import com.klavs.bindle.data.routes.EventPage
+import com.klavs.bindle.data.routes.LogIn
+import com.klavs.bindle.data.routes.Profile
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.logoFont
 import com.klavs.bindle.uix.view.event.getEventIconFromValue
 import com.klavs.bindle.uix.viewmodel.HomeViewModel
 import com.klavs.bindle.uix.viewmodel.NavHostViewModel
-import com.klavs.bindle.util.EventBottomSheet
-import com.klavs.bindle.util.TicketBottomSheet
-import com.klavs.bindle.util.TimeFunctions
-import com.klavs.bindle.util.UnverifiedAccountAlertDialog
-import com.klavs.bindle.util.UtilFunctions
+import com.klavs.bindle.helper.EventBottomSheet
+import com.klavs.bindle.helper.TicketBottomSheet
+import com.klavs.bindle.helper.TimeFunctions
+import com.klavs.bindle.helper.UnverifiedAccountAlertDialog
+import com.klavs.bindle.helper.UtilFunctions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -124,8 +129,7 @@ import java.time.ZoneOffset
 
 
 @OptIn(
-    ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
+    ExperimentalPermissionsApi::class
 )
 @Composable
 fun Home(
@@ -144,20 +148,19 @@ fun Home(
         )
     } else null
 
-    val userResource by navHostViewModel.userResourceFlow.collectAsState()
-    val upcomingEventsResource by navHostViewModel.upcomingEvents.collectAsState()
-    val eventsNearMeResource by homeViewModel.eventsNearMe.collectAsState()
-    val currentLocationResource by homeViewModel.currentLocation.collectAsState()
-    val popularCommunitiesResource by homeViewModel.popularCommunitiesResource.collectAsState()
-    val popularCommunityList by homeViewModel.popularCommunityList.collectAsState()
-    val lastPopularCommunityDocSnapshot by homeViewModel.lastPopularCommunityDocSnapshot.collectAsState()
+    val userResource by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
+    val upcomingEventsResource by navHostViewModel.upcomingEvents.collectAsStateWithLifecycle()
+    val eventsNearMeResource by homeViewModel.eventsNearMe.collectAsStateWithLifecycle()
+    val currentLocationResource by homeViewModel.currentLocation.collectAsStateWithLifecycle()
+    val popularCommunitiesResource by homeViewModel.popularCommunitiesResource.collectAsStateWithLifecycle()
+    val popularCommunityList by homeViewModel.popularCommunityList.collectAsStateWithLifecycle()
+    val lastPopularCommunityDocSnapshot by homeViewModel.lastPopularCommunityDocSnapshot.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackBarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(locationPermissionState.status) {
         if (locationPermissionState.status.isGranted) {
-            if (currentLocationResource is Resource.Idle
-                || currentLocationResource is Resource.Error
+            if (currentLocationResource !is Resource.Success || eventsNearMeResource is Resource.Idle
             ) {
                 homeViewModel.getCurrentLocation()
             }
@@ -225,18 +228,16 @@ fun Home(
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = true
                 }
-                launchSingleTop = true
                 restoreState = true
             }
         },
-        onEventClick = { navController.navigate("event_page/$it") },
-        onLoginClick = { navController.navigate("log_in") },
+        onEventClick = { navController.navigate(EventPage(it)) },
+        onLoginClick = { navController.navigate(LogIn) },
         onExploreClick = {
-            navController.navigate("map_graph") {
+            navController.navigate(BottomNavItem.Map.route) {
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = true
                 }
-                launchSingleTop = true
                 restoreState = true
             }
         },
@@ -246,12 +247,11 @@ fun Home(
                 popUpTo(navController.graph.findStartDestination().id) {
                     saveState = true
                 }
-                launchSingleTop = true
                 restoreState = true
             }
         },
         onCommunityClick = {
-            navController.navigate("community_page/${it}")
+            navController.navigate(CommunityPage(it))
         },
         tryAgain = {
             homeViewModel.getCurrentLocation()
@@ -279,8 +279,8 @@ fun Home(
         },
         navHostViewModel = navHostViewModel,
         currentUser = currentUser,
-        navigateToEventPage = { navController.navigate("event_page/$it") },
-        navigateToProfile = { navController.navigate("menu_profile") },
+        navigateToEventPage = { navController.navigate(EventPage(it)) },
+        navigateToProfile = { navController.navigate(Profile) },
         loadMorePopularCommunities = { homeViewModel.getPopularCommunities(4) },
         popularCommunityList = popularCommunityList,
         scope = scope,
@@ -320,7 +320,7 @@ private fun HomeContent(
     var showTicketBottomSheet by remember { mutableStateOf(false) }
     val ticketSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showCommunitiesBottomSheet by rememberSaveable { mutableStateOf(false) }
-    val communitiesBottomSheetState = rememberModalBottomSheetState()
+    val communitiesBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showUnverifiedAccountAlertDialog by remember { mutableStateOf(false) }
     var showEventBottomSheet by remember { mutableStateOf<Event?>(null) }
     val eventBottomSheetState = rememberModalBottomSheetState()
@@ -367,7 +367,7 @@ private fun HomeContent(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painterResource(R.drawable.logo_no_background),
-                            contentDescription = "Elips",
+                            contentDescription = stringResource(R.string.app_name),
                             modifier = Modifier
                                 .padding(end = 10.dp)
                                 .size(IconButtonDefaults.mediumIconSize),
@@ -758,7 +758,7 @@ private fun EventsNearMe(
                                                     ) {
                                                         Icon(
                                                             imageVector = Icons.AutoMirrored.Rounded.NavigateNext,
-                                                            contentDescription = ""
+                                                            contentDescription = "View the Event"
                                                         )
                                                     }
                                                 },
@@ -903,7 +903,8 @@ private fun PopularCommunities(
                                     CoilImageLoader(
                                         url = community.communityPictureUrl,
                                         context = context,
-                                        modifier = Modifier.matchParentSize()
+                                        modifier = Modifier.matchParentSize(),
+                                        contentDescription = community.name
                                     )
                                 } else {
                                     Image(
@@ -1014,7 +1015,8 @@ private fun PopularCommunitiesBottomSheet(
                                     CoilImageLoader(
                                         url = community.communityPictureUrl,
                                         context = context,
-                                        modifier = Modifier.matchParentSize()
+                                        modifier = Modifier.matchParentSize(),
+                                        contentDescription = community.name
                                     )
                                 } else {
                                     Image(
@@ -1393,12 +1395,12 @@ fun HomePreview() {
         userResource = Resource.Success(data = User()),
         popularCommunitiesResource = Resource.Success(data = suggestedCommunities),
         eventsNearMeResource = Resource.Success(data = nearEventList),
-        upcomingEventsResource = Resource.Success(data = emptyList()),
+        upcomingEventsResource = Resource.Success(data = nearEventList),
         currentLocationResource = Resource.Success(data = Location("test_provider").apply {
             this.latitude = latitude
             this.longitude = longitude
         }),
-        locationPermissionIsGranted = false,
+        locationPermissionIsGranted = true,
         navigateToEventsPage = {},
         onEventClick = {},
         onLoginClick = {},

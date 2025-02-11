@@ -74,6 +74,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
@@ -81,11 +82,12 @@ import com.google.firebase.firestore.FieldValue
 import com.klavs.bindle.R
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.message.Message
+import com.klavs.bindle.data.routes.EventPage
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
 import com.klavs.bindle.uix.view.CoilImageLoader
 import com.klavs.bindle.uix.viewmodel.event.EventChatViewModel
-import com.klavs.bindle.util.Constants
+import com.klavs.bindle.helper.Constants
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -103,10 +105,10 @@ fun EventChat(
     navController: NavHostController,
     chatViewModel: EventChatViewModel
 ) {
-    val eventResource by chatViewModel.event.collectAsState()
-    val pagedMessagesResource by chatViewModel.messages.collectAsState()
-    val newMessagesResource by chatViewModel.newMessages.collectAsState()
-    val messageSentResource by chatViewModel.messageSent.collectAsState()
+    val eventResource by chatViewModel.event.collectAsStateWithLifecycle()
+    val pagedMessagesResource by chatViewModel.messages.collectAsStateWithLifecycle()
+    val newMessagesResource by chatViewModel.newMessages.collectAsStateWithLifecycle()
+    val messageSentResource by chatViewModel.messageSent.collectAsStateWithLifecycle()
     val messages = remember { mutableStateListOf<Message>() }
     var messagesLoaded by remember { mutableStateOf(false) }
     var reportUserDialog by remember { mutableStateOf<Message?>(null) }
@@ -114,7 +116,7 @@ fun EventChat(
 
     BackHandler {
         if (navController.currentBackStackEntry == null) {
-            navController.navigate("event_page/$eventId")
+            navController.navigate(EventPage(eventId))
         } else {
             navController.popBackStack()
         }
@@ -169,7 +171,7 @@ fun EventChat(
         },
         onBackClick = {
             if (navController.currentBackStackEntry == null) {
-                navController.navigate("event_page/$eventId")
+                navController.navigate(EventPage(eventId))
             } else {
                 navController.popBackStack()
             }
@@ -837,7 +839,8 @@ fun MessageRow(
                             CoilImageLoader(
                                 message.senderPhotoUrl,
                                 context = context,
-                                Modifier.matchParentSize()
+                                Modifier.matchParentSize(),
+                                message.senderUsername?:"message sender"
                             )
                         } else {
                             Image(

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -29,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ArrowRightAlt
 import androidx.compose.material.icons.automirrored.rounded.NavigateNext
 import androidx.compose.material.icons.outlined.Celebration
 import androidx.compose.material.icons.outlined.Lock
@@ -73,7 +71,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil3.compose.rememberAsyncImagePainter
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -82,7 +80,6 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.google.firebase.Timestamp
 import com.klavs.bindle.R
-import com.klavs.bindle.data.entity.sealedclasses.BottomNavItem
 import com.klavs.bindle.data.entity.community.CommunityFirestore
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.ui.theme.Green2
@@ -112,7 +109,7 @@ fun CreateCommunity(
     var isError by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
-    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsState()
+    val userResourceFlow by navHostViewModel.userResourceFlow.collectAsStateWithLifecycle()
 
     val permissionState = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val permissionState =
@@ -167,11 +164,7 @@ fun CreateCommunity(
 
             is Resource.Success -> {
                 isLoading = false
-                navController.navigate(BottomNavItem.Communities.route) {
-                    popUpTo("create_community") {
-                        inclusive = true
-                    }
-                }
+                navController.popBackStack()
             }
         }
     }

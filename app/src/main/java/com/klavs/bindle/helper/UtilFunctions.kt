@@ -1,4 +1,4 @@
-package com.klavs.bindle.util
+package com.klavs.bindle.helper
 
 import com.google.android.gms.maps.model.LatLng
 import com.klavs.bindle.R

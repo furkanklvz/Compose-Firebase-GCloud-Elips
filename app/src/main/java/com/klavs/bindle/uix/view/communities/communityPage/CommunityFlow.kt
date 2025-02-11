@@ -84,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
@@ -92,12 +93,13 @@ import coil3.request.crossfade
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseUser
 import com.klavs.bindle.R
-import com.klavs.bindle.util.TimeFunctions
+import com.klavs.bindle.helper.TimeFunctions
 import com.klavs.bindle.data.entity.community.Community
 import com.klavs.bindle.data.entity.sealedclasses.CommunityRoles
 import com.klavs.bindle.data.entity.Event
 import com.klavs.bindle.data.entity.Post
 import com.klavs.bindle.data.entity.PostComment
+import com.klavs.bindle.data.routes.CommunityEvents
 import com.klavs.bindle.resource.Resource
 import com.klavs.bindle.uix.viewmodel.communities.CommunityPageViewModel
 import com.klavs.bindle.uix.viewmodel.communities.PostViewModel
@@ -284,7 +286,7 @@ fun CommunityFlow(
                     onEventListClick = {
                         if (rolePriority != null) {
                             val encodedCommunityName = Uri.encode(community.name)
-                            navController.navigate("community_events_list_page/${community.id}/$encodedCommunityName")
+                            navController.navigate(CommunityEvents(community.id, encodedCommunityName))
                         }
                     },
                     viewModel = viewModelCommunity,
@@ -378,10 +380,7 @@ fun CommunityFlow(
 
                             },
                             onPostClick = {
-                                navController.navigate("post/${community.id}/${post.id}") {
-                                    restoreState = true
-                                    launchSingleTop = true
-                                }
+                                navController.navigate(com.klavs.bindle.data.routes.Post(community.id, post.id))
                             },
                             onReportClick = {
                                 showReportDialog(post)
@@ -798,14 +797,14 @@ private fun PostRow(
                                 onLikeClick(false)
                             }) {
                                 Icon(
-                                    Icons.Rounded.Favorite, null, tint = Color.Red
+                                    Icons.Rounded.Favorite, "liked", tint = Color.Red
                                 )
                             }
                         } else {
                             IconButton(onClick = {
                                 onLikeClick(true)
                             }) {
-                                Icon(Icons.Rounded.FavoriteBorder, null)
+                                Icon(Icons.Rounded.FavoriteBorder, "like")
                             }
                         }
                         Text(post.numOfLikes?.toString() ?: "")
@@ -816,7 +815,7 @@ private fun PostRow(
                             IconButton(
                                 onClick = onCommentClick
                             ) {
-                                Icon(Icons.Rounded.ChatBubbleOutline, null)
+                                Icon(Icons.Rounded.ChatBubbleOutline, "comment on")
                             }
                             Text(post.numOfComments?.toString() ?: "")
                         }
@@ -899,7 +898,7 @@ fun CommentsBottomSheet(
 ) {
     val context = LocalContext.current
     var textingComment by remember { mutableStateOf("") }
-    val pagedComments by vmPost.pagedComments.collectAsState()
+    val pagedComments by vmPost.pagedComments.collectAsStateWithLifecycle()
     val commentList = remember { mutableStateListOf<PostComment>() }
     var isError by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }

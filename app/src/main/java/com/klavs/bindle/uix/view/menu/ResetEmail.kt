@@ -44,7 +44,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.klavs.bindle.R
 import com.klavs.bindle.resource.Resource
@@ -55,7 +54,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun ResetEmail(
     navController: NavHostController,
-    myUid: String?,
     viewModel: ProfileViewModel
 ) {
     val context = LocalContext.current
@@ -132,11 +130,7 @@ fun ResetEmail(
                     value = password.value
                 ) {
                     password.value = it
-                    if (password.value.isBlank()) {
-                        passwordIsEmpty.value = true
-                    } else {
-                        passwordIsEmpty.value = false
-                    }
+                    passwordIsEmpty.value = password.value.isBlank()
                 }
                 Spacer(modifier = Modifier.height(30.dp))
                 EmailTextField(
